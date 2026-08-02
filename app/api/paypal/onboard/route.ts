@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         legal_consents: [{ type: "SHARE_DATA_CONSENT", granted: true }],
         partner_config_override: {
           return_url: returnUrl,
-          return_url_description: "Return to Bill Splitter",
+          return_url_description: "Return to Split & Pay",
         },
       }),
     });

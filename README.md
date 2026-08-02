@@ -1,31 +1,46 @@
-# vinext-starter
+# Split & Pay
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Split & Pay turns itemized receipts and shared expenses into a clear breakdown
+of who owes what. It supports local drafts, shared bills, account history,
+receipt scanning, and optional PayPal merchant onboarding.
 
 ## Prerequisites
 
 - Node.js `>=22.13.0`
+- A Supabase project for accounts and shared bills
+- AWS Textract credentials for receipt scanning
+- PayPal partner credentials for merchant onboarding and payments
 
 ## Quick Start
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+Copy `.env.example` to `.env.local`, replace each placeholder, and initialize
+Supabase with the SQL files in `supabase/`. Never commit real credentials.
 
-## Included Shape
+On Windows, use a directory path without shell metacharacters such as `&` when
+running npm scripts because some dependency shims do not quote those paths.
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+## Production environment
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `PAYPAL_ENV`
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_PARTNER_MERCHANT_ID`
+- `PAYPAL_BN_CODE`
+
+Start with `PAYPAL_ENV=sandbox`. Switch to `live` only after PayPal approves
+the production integration and the complete payment flow has been verified.
 
 ## Workspace Auth Headers
 

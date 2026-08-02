@@ -1,5 +1,5 @@
 {
-  "name": "site-creator-vinext-starter",
+  "name": "split-and-pay",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -22,7 +22,6 @@
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-loading-skeleton": "3.5.0",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {

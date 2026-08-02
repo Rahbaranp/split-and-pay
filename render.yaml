@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bill-splitter
+    name: split-and-pay
     runtime: node
     plan: free
     buildCommand: rm -rf .next && npm ci && npm run build
@@ -19,3 +19,15 @@ services:
         sync: false
       - key: AWS_REGION
         value: us-west-2
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_PARTNER_MERCHANT_ID
+        sync: false
+      - key: PAYPAL_BN_CODE
+        sync: false
