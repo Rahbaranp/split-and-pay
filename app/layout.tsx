@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 
-const title = "Split & Pay — Share travel and everyday costs";
-const description = "Split itemized bills, share expenses with friends, and settle up fairly.";
+const title = "Split & Pay — Restaurant bill splitting made simple";
+const description = "Scan restaurant receipts, split itemized bills with friends, and settle up fairly.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

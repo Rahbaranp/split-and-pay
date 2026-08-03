@@ -32,7 +32,7 @@ test("server-renders Split & Pay metadata", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Split &amp; Pay — Share travel and everyday costs<\/title>/i);
+  assert.match(html, /<title>Split &amp; Pay — Restaurant bill splitting made simple<\/title>/i);
   assert.match(html, /<meta[^>]+name="description"[^>]+settle up fairly/i);
   assert.match(html, /<meta[^>]+property="og:image"[^>]+\/og\.png/i);
   assert.match(html, /<meta[^>]+name="twitter:card"[^>]+summary_large_image/i);

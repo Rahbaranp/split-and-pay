@@ -1,6 +1,6 @@
 # Split & Pay
 
-Split & Pay turns itemized receipts and shared expenses into a clear breakdown
+Split & Pay turns restaurant receipts and shared meals into a clear breakdown
 of who owes what. It supports local drafts, shared bills, account history,
 receipt scanning, and optional PayPal merchant onboarding.
 
