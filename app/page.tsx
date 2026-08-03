@@ -186,6 +186,7 @@ export default function Home() {
   const skipGuestDraftSave = useRef(false);
   const guestAtomicUntil = useRef(0);
   const billIdentityRef = useRef("");
+  const sharingResultsAuth = useRef(false);
 
   function getBillIdentity() {
     const id = draft.cloudId || billIdentityRef.current || crypto.randomUUID();
@@ -337,6 +338,7 @@ export default function Home() {
         }
         setSaveStatus("saved");
       } else if (draft.title || draft.people.length || draft.expenses.length) {
+        if (sharingResultsAuth.current) { setCloudReady(true); return; }
         setAppConfirm({ type: "save-local" });
         return;
       }
@@ -714,6 +716,7 @@ export default function Home() {
       } else {
         let activeUserId = userId;
         if (!activeUserId) {
+          sharingResultsAuth.current = true;
           const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
           activeUserId = anonymousData.user?.id || "";
           if (anonymousError || !activeUserId) throw new Error(anonymousError?.message || "Could not start anonymous sharing.");
@@ -754,6 +757,7 @@ export default function Home() {
       if (cause instanceof DOMException && cause.name === "AbortError") return;
       setError(cause instanceof Error ? `Could not share the latest results: ${cause.message}` : "Could not share the latest results.");
     } finally {
+      sharingResultsAuth.current = false;
       setSharing(false);
     }
   }
