@@ -946,10 +946,17 @@ export default function Home() {
       if (token) { setOrganizerShareToken(token); setSharedLoaded(true); setAdvanced(false); }
     }
   }
-  function requestSharingSignIn() {
+  async function requestSharingSignIn() {
+    if (!supabase) { setError("Cloud sharing is not available yet."); return; }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     localStorage.setItem(SHARE_AFTER_SIGN_IN_KEY, "1");
-    setSharingEnabled(true); setAccountOpen(true); setError("");
+    setSharing(true); setSharingEnabled(true); setError("");
+    const { error: anonymousError } = await supabase.auth.signInAnonymously();
+    if (anonymousError) {
+      localStorage.removeItem(SHARE_AFTER_SIGN_IN_KEY);
+      setSharing(false); setSharingEnabled(false);
+      setError(anonymousError.message || "Could not start anonymous sharing.");
+    }
   }
   async function signInWithGoogle() {
     if (!supabase) return;
