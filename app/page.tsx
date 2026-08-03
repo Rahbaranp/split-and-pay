@@ -31,6 +31,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
+const APP_VERSION = "0.1.6";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -1235,7 +1236,7 @@ export default function Home() {
   return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""}`}><div className="app-shell">
     <header className="topbar">
       <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img src="/bill-splitter-icon.png" alt="" /></button>
-      <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Share travel & everyday costs</span></div>
+      <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Share travel & everyday costs</span><small className="version-badge">Version {APP_VERSION}</small></div>
       <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
     </header>
     {!guestParticipantId&&<section className="account-strip"><span title={userEmail || "Optional account"}>{userEmail || "Optional"}</span>{userEmail?<div className="account-strip-actions"><button className="account-restaurant" onClick={()=>setAccountOpen(true)}>Restaurant</button><button className="account-signout" onClick={()=>void signOut()}>Sign out</button></div>:<button onClick={() => setAccountOpen(true)}>Sign in</button>}</section>}

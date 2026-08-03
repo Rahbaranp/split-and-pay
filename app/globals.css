@@ -20,6 +20,7 @@ main.light { --bg: #eff6f1; --surface: #fff; --surface-2: #f2f7f4; --text: #1221
 .brand-copy { text-align: center; display: flex; flex-direction: column; gap: 3px; }
 .brand-copy strong { font-size: clamp(31px, 6.4vw, 43px); line-height: 1; letter-spacing: .015em; white-space: nowrap; }
 .brand-copy span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
+.brand-copy .version-badge { align-self: center; margin-top: 4px; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 999px; color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .topbar > .theme-button { width: 42px; height: 62px; justify-self: end; border-radius: 14px; font-size: 19px; }
 .account-strip { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 36px; margin: 7px 0 2px; padding: 4px 8px 4px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .account-strip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
