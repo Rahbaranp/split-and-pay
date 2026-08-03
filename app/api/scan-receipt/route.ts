@@ -1,10 +1,47 @@
-import { AnalyzeExpenseCommand, TextractClient, type ExpenseField } from "@aws-sdk/client-textract";
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
 const scanWindows = new Map<string, { count: number; resetAt: number }>();
 const ignoredLine = /^(sub\s*total|total|tax|tip|discount|change|cash|visa|mastercard|amex|balance|amount due|payment|credit|debit|fees?)(\b|\s|:)/i;
+
+type ExpenseField = { Type?: { Text?: string }; ValueDetection?: { Text?: string } };
+type TextractResult = { ExpenseDocuments?: { LineItemGroups?: { LineItems?: { LineItemExpenseFields?: ExpenseField[] }[] }[] }[] };
+
+const encoder = new TextEncoder();
+const hex = (value: ArrayBuffer) => [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+async function sha256(value: string) { return hex(await crypto.subtle.digest("SHA-256", encoder.encode(value))); }
+async function hmac(key: BufferSource, value: string) {
+  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(value));
+}
+async function analyzeExpense(imageBase64: string) {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const accessKey = process.env.AWS_ACCESS_KEY_ID || "";
+  const secretKey = process.env.AWS_SECRET_ACCESS_KEY || "";
+  const host = `textract.${region}.amazonaws.com`;
+  const target = "Textract.AnalyzeExpense";
+  const contentType = "application/x-amz-json-1.1";
+  const body = JSON.stringify({ Document: { Bytes: imageBase64 } });
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const signedHeaders = "content-type;host;x-amz-date;x-amz-target";
+  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-date:${amzDate}\nx-amz-target:${target}\n`;
+  const canonicalRequest = `POST\n/\n\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(body)}`;
+  const scope = `${dateStamp}/${region}/textract/aws4_request`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${scope}\n${await sha256(canonicalRequest)}`;
+  const dateKey = await hmac(encoder.encode(`AWS4${secretKey}`), dateStamp);
+  const regionKey = await hmac(dateKey, region);
+  const serviceKey = await hmac(regionKey, "textract");
+  const signingKey = await hmac(serviceKey, "aws4_request");
+  const signature = hex(await hmac(signingKey, stringToSign));
+  const authorization = `AWS4-HMAC-SHA256 Credential=${accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  const response = await fetch(`https://${host}/`, { method: "POST", headers: { "content-type": contentType, "x-amz-date": amzDate, "x-amz-target": target, authorization }, body, signal: AbortSignal.timeout(45_000) });
+  const data = await response.json() as TextractResult & { Message?: string; message?: string };
+  if (!response.ok) throw new Error(data.Message || data.message || `AWS Textract returned ${response.status}.`);
+  return data;
+}
 
 function fieldText(fields: ExpenseField[], type: string) {
   return fields.find((field) => field.Type?.Text?.toUpperCase() === type)?.ValueDetection?.Text?.trim() || "";
@@ -49,10 +86,7 @@ export async function POST(request: NextRequest) {
   if (image.length > 10_000_000) return Response.json({ error: "The receipt photo is too large. Try a smaller photo." }, { status: 413 });
 
   try {
-    const textract = new TextractClient({ region: process.env.AWS_REGION || "us-west-2" });
-    const result = await textract.send(new AnalyzeExpenseCommand({ Document: { Bytes: Buffer.from(match[2], "base64") } }), {
-      abortSignal: AbortSignal.timeout(45_000),
-    });
+    const result = await analyzeExpense(match[2]);
 
     const items = (result.ExpenseDocuments || []).flatMap((document) =>
       (document.LineItemGroups || []).flatMap((group) =>
