@@ -442,7 +442,7 @@ export default function Home() {
   const subtotal = draft.expenses.reduce((sum, item) => sum + item.cents, 0);
   const unassigned = draft.expenses.filter((item) => !item.consumers.length).length;
   const sharedMode = Boolean(cloudShareToken || organizerShareToken || shareLink);
-  const canShareResults = Boolean((userId && cloudBillId) || cloudShareToken || organizerShareToken || shareLink);
+  const canShareResults = Boolean(draft.people.length && draft.expenses.length);
   const resultsShareToken = organizerShareToken || cloudShareToken || (shareLink ? new URL(shareLink).searchParams.get("share") || "" : "");
   useEffect(() => {
     if (!sharedMode || guestParticipantId) return;
@@ -712,27 +712,38 @@ export default function Home() {
         const { error: saveError } = await supabase.rpc("save_participant_draft", { p_token: cloudShareToken, p_participant_id: guestParticipantId, p_edit_token: savedGuest.edit_token, p_draft: participantDraft });
         if (saveError) throw new Error(saveError.message);
       } else {
-        if (!userId || !cloudBillId) throw new Error("Save this bill to the cloud before sharing results.");
-        const { error: saveError } = await supabase.from("bills").update({ restaurant_id: draft.restaurant?.id || null, title: draft.title, occurred_at: new Date(draft.dateTime).toISOString(), settings: { draft }, updated_at: new Date().toISOString() }).eq("id", cloudBillId);
+        let activeUserId = userId;
+        if (!activeUserId) {
+          const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
+          activeUserId = anonymousData.user?.id || "";
+          if (anonymousError || !activeUserId) throw new Error(anonymousError?.message || "Could not start anonymous sharing.");
+        }
+        const activeBillId = cloudBillId || getBillIdentity();
+        const sharedDraft = { ...draft, cloudId: activeBillId };
+        const { error: saveError } = await supabase.from("bills").upsert({ id: activeBillId, owner_id: activeUserId, restaurant_id: draft.restaurant?.id || null, title: draft.title, occurred_at: new Date(draft.dateTime).toISOString(), settings: { draft: sharedDraft }, updated_at: new Date().toISOString() }, { onConflict: "id" });
         if (saveError) throw new Error(saveError.message);
+        setCloudBillId(activeBillId); setDraft(sharedDraft);
+        localStorage.setItem(`cloud-bill-${activeUserId}`, activeBillId);
         pendingLocalChange.current = false; lastOwnSaveAt.current = Date.now(); setSaveStatus("saved");
       }
+      const activeBillId = cloudBillId || draft.cloudId || billIdentityRef.current;
       let token = organizerShareToken || cloudShareToken || (shareLink ? new URL(shareLink).searchParams.get("share") || "" : "");
-      if (token && !guestParticipantId && cloudBillId) {
+      if (token && !guestParticipantId && activeBillId) {
         const { data: tokenBill } = await supabase.rpc("open_shared_bill", { p_token: token });
         const linkedBillId = (tokenBill as { bill_id?: string }[] | null)?.[0]?.bill_id || "";
-        if (linkedBillId !== cloudBillId) {
-          localStorage.removeItem(`bill-share-token-${cloudBillId}`);
+        if (linkedBillId !== activeBillId) {
+          localStorage.removeItem(`bill-share-token-${activeBillId}`);
           setOrganizerShareToken(""); setShareLink(""); token = "";
         }
       }
       if (!token) {
-        const { data, error: shareError } = await supabase.rpc("create_bill_share", { p_bill_id: cloudBillId });
+        if (!activeBillId) throw new Error("Could not identify this bill for sharing.");
+        const { data, error: shareError } = await supabase.rpc("create_bill_share", { p_bill_id: activeBillId });
         if (shareError || !data) throw new Error(shareError?.message || "Could not create the private results link.");
         token = data as string;
         const newLink = `${window.location.origin}/?share=${token}`;
         setOrganizerShareToken(token); setShareLink(newLink); setSharingEnabled(true);
-        localStorage.setItem(`bill-share-token-${cloudBillId}`, token);
+        localStorage.setItem(`bill-share-token-${activeBillId}`, token);
       }
       const resultsLink = `${window.location.origin}/?share=${token}&results=1`;
       const shareData = { title: savedTitle, text: "View your assignments and final bill result.", url: resultsLink };

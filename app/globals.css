@@ -596,3 +596,6 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .results-qr-card { grid-template-columns: 1fr; text-align: center; }
   .results-qr-wrap { width: fit-content; margin: 0 auto; }
 }
+.sharing-panel {
+  display: none !important;
+}
