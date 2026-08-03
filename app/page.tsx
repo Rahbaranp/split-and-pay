@@ -706,6 +706,7 @@ export default function Home() {
     if (!supabase) { setError("Cloud sharing is not available right now."); return; }
     setSharing(true); setError(""); setNotice("Saving latest results…");
     try {
+      let shareBillId = cloudBillId || draft.cloudId || billIdentityRef.current;
       if (cloudShareToken && guestParticipantId) {
         const savedGuest = JSON.parse(localStorage.getItem(`bill-guest-${cloudShareToken}`) || "{}") as { edit_token?: string };
         if (!savedGuest.edit_token) throw new Error("Your participant access has expired. Choose your name again before sharing.");
@@ -721,7 +722,11 @@ export default function Home() {
           activeUserId = anonymousData.user?.id || "";
           if (anonymousError || !activeUserId) throw new Error(anonymousError?.message || "Could not start anonymous sharing.");
         }
-        const activeBillId = cloudBillId || getBillIdentity();
+        const candidateBillId = shareBillId || getBillIdentity();
+        const { data: ownedBill, error: ownershipError } = await supabase.from("bills").select("id").eq("id", candidateBillId).eq("owner_id", activeUserId).maybeSingle();
+        if (ownershipError) throw new Error(ownershipError.message);
+        const activeBillId = ownedBill?.id || crypto.randomUUID();
+        shareBillId = activeBillId;
         const sharedDraft = { ...draft, cloudId: activeBillId };
         const { error: saveError } = await supabase.from("bills").upsert({ id: activeBillId, owner_id: activeUserId, restaurant_id: draft.restaurant?.id || null, title: draft.title, occurred_at: new Date(draft.dateTime).toISOString(), settings: { draft: sharedDraft }, updated_at: new Date().toISOString() }, { onConflict: "id" });
         if (saveError) throw new Error(saveError.message);
@@ -729,7 +734,7 @@ export default function Home() {
         localStorage.setItem(`cloud-bill-${activeUserId}`, activeBillId);
         pendingLocalChange.current = false; lastOwnSaveAt.current = Date.now(); setSaveStatus("saved");
       }
-      const activeBillId = cloudBillId || draft.cloudId || billIdentityRef.current;
+      const activeBillId = shareBillId;
       let token = organizerShareToken || cloudShareToken || (shareLink ? new URL(shareLink).searchParams.get("share") || "" : "");
       if (token && !guestParticipantId && activeBillId) {
         const { data: tokenBill } = await supabase.rpc("open_shared_bill", { p_token: token });
