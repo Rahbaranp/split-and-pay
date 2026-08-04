@@ -28,8 +28,8 @@ main.light { --bg: #eff6f1; --surface: #fff; --surface-2: #f2f7f4; --text: #1221
 .account-strip-actions { display: flex; align-items: center; gap: 7px; }
 .account-strip .account-restaurant { border: 1px solid var(--accent); background: transparent; color: var(--accent); }
 .account-strip .account-signout { border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); }
-.progress.four-steps { flex-wrap: nowrap; overflow: hidden; }
-.progress.four-steps button { min-width: 0; white-space: nowrap; }
+.progress.five-steps { flex-wrap: nowrap; overflow: hidden; }
+.progress.five-steps button { min-width: 0; white-space: nowrap; }
 .title-field > span { color: var(--text); }
 .title-field > span em { color: var(--muted); }
 .intro { padding: 42px 8px 22px; display: grid; gap: 14px; }
@@ -120,7 +120,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .save-status.saving { color: #f0c66b; }
 .save-status.offline { color: #f19a9a; }
 
-.progress { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; padding: 14px 2px 0; }
+.progress { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 4px; padding: 14px 2px 0; }
 .progress button { border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; gap: 8px; justify-content: center; padding: 8px; }
 .progress { position: relative; } .progress::before { content: ""; position: absolute; top: 27px; left: 12.5%; right: 12.5%; height: 2px; background: var(--line); z-index: 0; }
 .progress button { position: relative; z-index: 1; }
@@ -128,6 +128,21 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .progress button.active { color: var(--text); font-weight: 800; } .progress button.active b { background: var(--accent); border-color: var(--accent); color: #073044; }
 .progress button.done b { background: #65d69a; color: #073b25; border-color: #65d69a; }
 .page-title { padding: 34px 8px 20px; } .page-title h1 { margin: 7px 0; font-size: clamp(36px,9vw,58px); } .page-title p { color: var(--muted); margin: 0; line-height: 1.5; }
+.start-page { padding-top: 8px; }
+.start-title { padding: 34px 12px 24px; text-align: center; }
+.start-title h1 { max-width: 720px; margin: 8px auto 12px; font-size: clamp(38px, 8vw, 62px); }
+.start-title p { max-width: 650px; margin: 0 auto; }
+.start-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.start-option { min-height: 370px; padding: 26px; display: flex; flex-direction: column; gap: 20px; }
+.start-option > div { flex: 1; }
+.start-option-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 18px; background: var(--accent); color: #073044; font-size: 27px; font-weight: 900; }
+.start-option small { color: var(--accent); font-weight: 800; letter-spacing: .14em; }
+.start-option h2 { margin: 8px 0 10px; font-size: clamp(25px, 4vw, 34px); line-height: 1.05; }
+.start-option p { margin: 0; color: var(--muted); line-height: 1.6; }
+.start-option > button { width: 100%; min-height: 54px; }
+.start-account { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.start-account-actions { display: grid; gap: 10px; }
+.start-account-actions button { width: 100%; min-height: 50px; }
 .error-banner { margin: 14px 0 0; border: 1px solid #d96868; color: #ffb2b2; background: #4c2428; border-radius: 14px; padding: 12px 15px; }
 .notice-banner { margin: 14px 0 0; border: 1px solid var(--accent); color: var(--text); background: var(--surface); border-radius: 14px; padding: 12px 15px; }
 .title-time { padding: 18px; display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,.7fr); gap: 14px; }
@@ -378,7 +393,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .topbar { min-height: 110px; grid-template-columns: 78px minmax(0, 1fr) 78px; padding: 8px 10px; }
   .brand-copy strong { font-size: clamp(24px, 7.4vw, 32px); }
   .topbar > .theme-button { width: 38px; height: 58px; }
-  .progress.four-steps button { font-size: 9px; padding-inline: 2px; }
+  .progress.five-steps button { font-size: 9px; padding-inline: 2px; }
   .account-button { padding: 8px; font-size: 12px; }
 }
 .history-backdrop { align-items: center; padding: 24px; }
@@ -439,8 +454,10 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .scan-line .money-input { margin: 0; }
 .scan-add { margin-top: 8px; }
 @media (max-width: 540px) {
-  .progress.four-steps button { font-size: 9px; }
-  .progress.four-steps button b { width: 32px; height: 32px; }
+  .progress.five-steps button { font-size: 9px; }
+  .progress.five-steps button b { width: 32px; height: 32px; }
+  .start-options { grid-template-columns: 1fr; }
+  .start-option { min-height: 0; padding: 22px; }
   .scan-line { grid-template-columns: 24px 1fr; }
   .scan-line .money-input { grid-column: 2; width: 100%; }
 }

@@ -12,11 +12,11 @@ type RestaurantRef = { id: string; name: string; locationName: string; address: 
 type RegisteredRestaurant = RestaurantRef & { phone: string; publicCode: string; active: boolean };
 type RestaurantForm = { name: string; locationName: string; address: string; city: string; region: string; postalCode: string; phone: string };
 type Draft = {
-  flowVersion?: 4;
+  flowVersion?: 5;
   cloudId?: string;
   title: string; dateTime: string; people: Person[]; expenses: Expense[];
   taxEnabled: boolean; taxRate: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number;
-  discountCents: number; discountTiming: "before" | "after"; participantAdjustments: Record<string, ParticipantAdjustment>; totalOverrideCents: number; payments: Record<string, number>; noRepayment: Record<string, boolean>; canPayMerchant: Record<string, boolean>; settlementPreferences: Record<string, string[]>; venmoUsernames: Record<string, string>; theme: "dark" | "light"; step: 1 | 2 | 3 | 4;
+  discountCents: number; discountTiming: "before" | "after"; participantAdjustments: Record<string, ParticipantAdjustment>; totalOverrideCents: number; payments: Record<string, number>; noRepayment: Record<string, boolean>; canPayMerchant: Record<string, boolean>; settlementPreferences: Record<string, string[]>; venmoUsernames: Record<string, string>; theme: "dark" | "light"; step: 1 | 2 | 3 | 4 | 5;
   restaurant?: RestaurantRef;
 };
 type CloudBill = { id: string; title: string; occurred_at: string; status: "open" | "locked" | "archived"; updated_at: string; settings: { draft?: Draft } };
@@ -31,7 +31,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.8";
+const APP_VERSION = "0.1.9";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -46,15 +46,15 @@ const localNow = () => {
   return d.toISOString().slice(0, 16);
 };
 const initialDraft: Draft = {
-  flowVersion: 4, title: "", dateTime: localNow(), people: [], expenses: [], taxEnabled: false, taxRate: 0,
+  flowVersion: 5, title: "", dateTime: localNow(), people: [], expenses: [], taxEnabled: false, taxRate: 0,
   tipEnabled: false, tipMode: "percent", tipValue: 0, discountCents: 0, discountTiming: "before", participantAdjustments: {}, totalOverrideCents: 0, payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames: {}, theme: "dark", step: 1,
 };
 const normalizeDraft = (value: Partial<Draft>): Draft => {
   const legacyStep = value.step || 1;
-  const step = value.flowVersion === 4 ? legacyStep : legacyStep === 2 ? 3 : legacyStep === 3 ? 4 : 1;
+  const step = value.flowVersion === 5 ? legacyStep : value.flowVersion === 4 ? Math.min(5, legacyStep + 1) : legacyStep === 2 ? 4 : legacyStep === 3 ? 5 : 2;
   const people = (value.people || []).map((person, index) => ({ ...person, color: ["#86efac", "#65d69a"].includes(person.color.toLowerCase()) ? COLORS[index % COLORS.length] : person.color }));
   const expenses = (value.expenses || []).map((item) => ({ ...item, splitEqually: false, quantities: Object.fromEntries(item.consumers.map((id) => [id, Math.max(1, item.quantities?.[id] || 1)])) }));
-  return { ...initialDraft, ...value, people, expenses, flowVersion: 4, step } as Draft;
+  return { ...initialDraft, ...value, people, expenses, flowVersion: 5, step } as Draft;
 };
 const emptyRestaurantForm: RestaurantForm = { name: "", locationName: "", address: "", city: "", region: "", postalCode: "", phone: "" };
 
@@ -240,7 +240,7 @@ export default function Home() {
           const { data, error: shareError } = await supabase.rpc("open_shared_bill", { p_token: permanentToken });
           const shared = (data as { bill_id?: string; settings?: { draft?: Draft }; claimed_names?: string[] }[] | null)?.[0];
           if (shareError || !shared?.settings?.draft) throw new Error(shareError?.message || "This sharing link is invalid or closed.");
-          setDraft({ ...normalizeDraft(shared.settings.draft), cloudId: shared.bill_id || shared.settings.draft.cloudId, step: resultsView ? 3 : 2 });
+          setDraft({ ...normalizeDraft(shared.settings.draft), cloudId: shared.bill_id || shared.settings.draft.cloudId, step: resultsView ? 5 : 3 });
           setClaimedNames(shared.claimed_names || []);
           setAdvanced(false); setSharedLoaded(true);
         } catch (cause) {
@@ -481,7 +481,7 @@ export default function Home() {
   }, [draft, sharedMode, guestParticipantId]);
   const currentPersonId = draft.people.find((person) => person.name === guestName)?.id || "";
   useEffect(() => {
-    if (!sharedMode || !guestParticipantId || !currentPersonId || draft.step !== 4 || initializedPayments.current.has(currentPersonId)) return;
+    if (!sharedMode || !guestParticipantId || !currentPersonId || draft.step !== 5 || initializedPayments.current.has(currentPersonId)) return;
     initializedPayments.current.add(currentPersonId);
     const enteredTotal = draft.expenses.filter((item) => item.addedBy === guestParticipantId).reduce((sum, item) => sum + (finalItemCents[item.id] || item.cents), 0);
     if ((draft.payments[currentPersonId] || 0) === 0 && enteredTotal > 0) setDraft((current) => ({ ...current, payments: { ...current.payments, [currentPersonId]: enteredTotal } }));
@@ -783,14 +783,14 @@ export default function Home() {
   }
   function toggleMerchantAvailability(personId:string){const isAvailable=draft.canPayMerchant[personId]!==false;const count=draft.people.filter((person)=>draft.canPayMerchant[person.id]!==false).length;if(isAvailable&&count<=1){setError("At least one person must be available to pay the merchant.");return;}setError("");setDraft((current)=>({...current,canPayMerchant:{...current.canPayMerchant,[personId]:!isAvailable}}));}
   function toggleSettlementPreference(personId:string,preferredId:string){setDraft((current)=>{const list=current.settlementPreferences[personId]||[];return{...current,settlementPreferences:{...current.settlementPreferences,[personId]:list.includes(preferredId)?list.filter((id)=>id!==preferredId):[...list,preferredId]}};});}
-  function goTo(step: 1 | 2 | 3 | 4) {
-    if (step === 2 && draft.people.length < 2) { setError("Add at least two people."); return; }
-    if (step === 2 && sharingEnabled && shareLink && !guestParticipantId) {
+  function goTo(step: 1 | 2 | 3 | 4 | 5) {
+    if (step === 3 && draft.people.length < 2) { setError("Add at least two people."); return; }
+    if (step === 3 && sharingEnabled && shareLink && !guestParticipantId) {
       const token = organizerShareToken || new URL(shareLink).searchParams.get("share") || "";
       if (token) { latestDraft.current = draft; setSharedLoaded(true); setCloudShareToken(token); setError(""); return; }
     }
-    if (step === 3 && !draft.expenses.length) { setError("Add at least one expense."); return; }
-    if (step === 4 && unassigned && !guestParticipantId) { setError(`Assign ${unassigned} remaining item${unassigned === 1 ? "" : "s"}.`); return; }
+    if (step === 4 && !draft.expenses.length) { setError("Add at least one expense."); return; }
+    if (step === 5 && unassigned && !guestParticipantId) { setError(`Assign ${unassigned} remaining item${unassigned === 1 ? "" : "s"}.`); return; }
     setError(""); setDraft((d) => ({ ...d, step })); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function toggleConsumer(expenseId: string, personId: string) {
@@ -1106,7 +1106,7 @@ export default function Home() {
   async function duplicateHistoryBill(bill: CloudBill) {
     if (!supabase || !userId || !bill.settings?.draft) return;
     const copyId=crypto.randomUUID();
-    const copy: Draft = { ...bill.settings.draft, cloudId: copyId, title: `${bill.title || "Bill"} copy`, dateTime: localNow(), payments: {}, noRepayment: {}, step: 1 };
+    const copy: Draft = { ...normalizeDraft(bill.settings.draft), cloudId: copyId, title: `${bill.title || "Bill"} copy`, dateTime: localNow(), payments: {}, noRepayment: {}, step: 2 };
     const { data, error: duplicateError } = await supabase.from("bills").insert({ id: copyId, owner_id: userId, restaurant_id: copy.restaurant?.id || null, title: copy.title, occurred_at: new Date(copy.dateTime).toISOString(), settings: { draft: copy } }).select("id,title,occurred_at,status,updated_at,settings").single();
     if (duplicateError || !data) { setError(duplicateError?.message || "Could not duplicate this bill."); return; }
     setHistoryBills((current) => [data as CloudBill, ...current]);
@@ -1128,7 +1128,7 @@ export default function Home() {
     const guest = data as { participant_id: string; edit_token: string; name: string };
     localStorage.setItem(`bill-guest-${cloudShareToken}`, JSON.stringify(guest)); setGuestParticipantId(guest.participant_id); setGuestName(guest.name); setError("");
     setSharedLoaded(true); setAdvanced(false);
-    setDraft((current) => { const a = current.participantAdjustments?.[guest.participant_id]; const resultsView = new URLSearchParams(window.location.search).get("results") === "1"; return { ...current, ...(a || {}), step: resultsView ? 3 : 2 }; });
+    setDraft((current) => { const a = current.participantAdjustments?.[guest.participant_id]; const resultsView = new URLSearchParams(window.location.search).get("results") === "1"; return { ...current, ...(a || {}), step: resultsView ? 5 : 3 }; });
   }
   async function changeParticipant() {
     if (!supabase || !cloudShareToken || !guestParticipantId) return;
@@ -1240,7 +1240,7 @@ export default function Home() {
       <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
     </header>
     {!guestParticipantId&&<section className="account-strip"><span title={userEmail || "Optional account"}>{userEmail || "Optional"}</span>{userEmail?<div className="account-strip-actions"><button className="account-restaurant" onClick={()=>setAccountOpen(true)}>Restaurant</button><button className="account-signout" onClick={()=>void signOut()}>Sign out</button></div>:<button onClick={() => setAccountOpen(true)}>Sign in</button>}</section>}
-    <nav className="progress four-steps" aria-label="Bill steps">{([[1,"Group"],[2,"Expenses"],[3,"Assign"],[4,"Results"]] as const).map(([n,label]) => <button key={n} className={`${draft.step === n ? "active" : ""} ${draft.step > n ? "done" : ""}`} onClick={() => n < draft.step && goTo(n)}><b>{draft.step > n ? "✓" : n}</b><span>{label}</span></button>)}</nav>
+    <nav className="progress five-steps" aria-label="Bill steps">{([[1,"Start"],[2,"Group"],[3,"Expenses"],[4,"Assign"],[5,"Results"]] as const).map(([n,label]) => <button key={n} className={`${draft.step === n ? "active" : ""} ${draft.step > n ? "done" : ""}`} onClick={() => n < draft.step && !guestParticipantId && goTo(n)}><b>{draft.step > n ? "✓" : n}</b><span>{label}</span></button>)}</nav>
     {preferencePersonId&&(()=>{const person=draft.people.find((p)=>p.id===preferencePersonId);if(!person)return null;return <div className="account-backdrop" onMouseDown={()=>setPreferencePersonId("")}><section className="panel preference-dialog" role="dialog" aria-modal="true" onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setPreferencePersonId("")}>×</button><h2>{person.name}’s settlement preferences</h2><p>Choose people in preferred order. Tap again to remove.</p><div className="preference-person"><div>{draft.people.filter((other)=>other.id!==person.id).map((other)=>{const rank=(draft.settlementPreferences[person.id]||[]).indexOf(other.id);return <button className={rank>=0?"selected":""} key={other.id} onClick={()=>toggleSettlementPreference(person.id,other.id)}><i style={{background:other.color}}>{other.name[0].toUpperCase()}</i><span>{other.name}</span>{rank>=0&&<b>{rank+1}</b>}</button>})}</div></div><button className="google-button" onClick={()=>setPreferencePersonId("")}>Done</button></section></div>})()}
     {itemsPersonId&&(()=>{const person=draft.people.find((p)=>p.id===itemsPersonId);if(!person)return null;const details=personItemDetails(person.id);const items=draft.expenses.map((item,index)=>({item,index})).filter(({item})=>item.consumers.includes(person.id));return <div className="account-backdrop" onMouseDown={()=>setItemsPersonId("")}><section className="panel person-items-dialog" role="dialog" aria-modal="true" aria-label={`${person.name}'s items`} onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setItemsPersonId("")}>×</button><h2>{person.name}’s items</h2><div className="person-items-list">{items.map(({item,index})=>{const detail=details[item.id];return <div key={item.id}><span><strong>{item.name||`Item ${index+1}`}</strong><small>{detail.quantity} of {detail.totalQuantity} · {detail.percent.toFixed(detail.percent%1?1:0)}%</small></span><b>{money(detail.cents)}</b></div>})}</div><button className="google-button" onClick={()=>setItemsPersonId("")}>Done</button></section></div>})()}
     {notice && <div className="notice-banner">{notice}</div>}
@@ -1267,7 +1267,15 @@ export default function Home() {
       <div className="history-list">{visibleHistory.length ? Object.entries(groupedHistory).map(([date,bills])=><section className="history-date-group" key={date}><h3>{date}</h3>{bills.map((bill) => { const billDraft = bill.settings?.draft; return <article className="history-row" key={bill.id}><button className="history-main" onClick={() => openHistoryBill(bill)} disabled={!billDraft}><strong>{bill.title || "Untitled bill"}</strong><span>{displayDate(bill.occurred_at)} · {billDraft?.people.length || 0} people · {billDraft?.expenses.length || 0} items · {money(savedDraftTotal(billDraft))}</span><em>{bill.status==="archived"?"Finished":bill.status}</em></button><div className="history-actions"><button onClick={() => openHistoryBill(bill)}>{bill.status==="archived"?"View":"Open"}</button><button onClick={() => duplicateHistoryBill(bill)}>Duplicate</button><button onClick={() => renameHistoryBill(bill)}>Rename</button>{bill.status === "archived" ? <button onClick={() => setHistoryStatus(bill, "open")}>Restore</button> : <><button onClick={() => setHistoryStatus(bill, bill.status === "locked" ? "open" : "locked")}>{bill.status === "locked" ? "Unlock" : "Lock"}</button><button onClick={() => setHistoryStatus(bill, "archived")}>Finish</button></>}<button className="danger" onClick={() => deleteHistoryBill(bill)}>Delete</button></div></article>})}</section>) : <div className="history-empty"><strong>No bills found</strong><span>Try another name or date.</span></div>}</div>
     </section></div>}
     {historyPreviewBill&&(()=>{const billDraft=historyPreviewBill.settings?.draft;return <div className="account-backdrop history-backdrop" onMouseDown={()=>setHistoryPreviewBill(null)}><section className="panel history-preview" role="dialog" aria-modal="true" aria-label="Finished bill" onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setHistoryPreviewBill(null)}>×</button><span className="eyebrow">FINISHED BILL</span><h2>{historyPreviewBill.title||"Untitled bill"}</h2><p>{displayDate(historyPreviewBill.occurred_at)}</p><div className="history-preview-summary"><div><span>People</span><strong>{billDraft?.people.length||0}</strong></div><div><span>Items</span><strong>{billDraft?.expenses.length||0}</strong></div><div><span>Final total</span><strong>{money(savedDraftTotal(billDraft))}</strong></div></div><div className="history-preview-actions"><button className="auth-secondary" onClick={()=>setHistoryPreviewBill(null)}>Close</button><button className="google-button" onClick={()=>void duplicateHistoryBill(historyPreviewBill)}>Duplicate as new bill</button></div></section></div>})()}
-    {draft.step === 1 && <>
+    {draft.step === 1 && <section className="start-page">
+      <section className="page-title start-title"><span className="eyebrow">RESTAURANT BILL SPLITTER</span><h1>How would you like to begin?</h1><p>You can split a bill immediately without creating an account. Sign in only when you want saved groups and bill history.</p></section>
+      <div className="start-options">
+        <article className="panel start-option start-guest"><span className="start-option-icon" aria-hidden="true">$</span><div><small>QUICK START</small><h2>Split &amp; Pay without login</h2><p>Add people, scan or enter the restaurant bill, assign items, and share the final results. No account required.</p></div><button className="calculate" onClick={()=>goTo(2)}>Continue without login <span className="nav-arrow">›</span></button></article>
+        <article className="panel start-option start-account"><span className="start-option-icon" aria-hidden="true">✓</span><div><small>OPTIONAL ACCOUNT</small><h2>{userId?"Your saved bills":"Sign in & save bills"}</h2><p>{userId?"Open saved groups and previous bills, or begin a new restaurant bill.":"Sign in to reuse saved groups and keep your bill history available on your devices."}</p></div>{userId?<div className="start-account-actions"><button className="auth-secondary" onClick={()=>{setEditingGroup(null);setGroupsOpen(true);}}>Saved groups</button><button className="auth-secondary" onClick={()=>void loadHistory()}>Saved bills &amp; history</button><button className="google-button" onClick={()=>goTo(2)}>Start a new bill</button></div>:<button className="google-button" onClick={()=>setAccountOpen(true)}>Sign in</button>}</article>
+      </div>
+    </section>}
+
+    {draft.step === 2 && <>
       <section className="panel title-time single-title"><div className="title-field"><input disabled={Boolean(guestParticipantId)} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Restaurant or bill name (optional)" /><div className="saved-title-row"><small>Saved as: {savedTitle}</small>{userId&&<button onClick={()=>void loadHistory()}>My Bills</button>}</div></div></section>
       {draft.restaurant&&<section className="panel bill-restaurant-card"><span className="restaurant-confirm-icon">⌂</span><div><small>PAYING RESTAURANT</small><strong>{draft.restaurant.name}{draft.restaurant.locationName?` — ${draft.restaurant.locationName}`:""}</strong><span>{draft.restaurant.address}, {draft.restaurant.city}, {draft.restaurant.region} {draft.restaurant.postalCode}</span></div><button onClick={()=>setDraft((current)=>{const next={...current};delete next.restaurant;return next;})}>Change</button></section>}
       <section className="panel section-panel">
@@ -1281,10 +1289,10 @@ export default function Home() {
         <div className="expense-entry simple-entry"><div className="expense-inputs"><input value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder={`Item name (optional)`} /><div className="money-input"><span>$</span><input inputMode="decimal" value={itemAmount} onChange={(e)=>setItemAmount(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addExpense()} placeholder="0.00" /></div></div><button className="wide-secondary" onClick={addExpense}>＋ Add item</button></div>
       </section>
       {!guestParticipantId&&<section className={`panel share-card sharing-panel ${sharingEnabled?"sharing-open":"sharing-closed"}`}><div className="sharing-switch-row"><span><strong>Bill sharing</strong>{sharingEnabled&&<small>Friends can add their own items and choose what they used.</small>}</span><button className={`switch ${sharingEnabled ? "on" : ""}`} disabled={sharing||!draft.people.length} onClick={()=>userId?void toggleSharing():requestSharingSignIn()} aria-label="Turn bill sharing on or off"><i></i></button></div>{sharingEnabled&&<>{!userId&&<button className="share-sign-in" onClick={requestSharingSignIn}>Sign in to create a private link</button>}{sharing && <p className="share-status">Creating your private link…</p>}{shareLink && <><button className="share-bill-button" onClick={()=>void shareBillInvite()}>Share bill</button><div className="share-content">{qrCode && <div className="qr-wrap"><img src={qrCode} alt="QR code for the private bill link" /><small>Scan to join this bill</small></div>}<div className="share-link"><input readOnly value={shareLink} aria-label="Private bill link" /><button onClick={() => navigator.clipboard?.writeText(shareLink)}>Copy link</button><small>Anyone with this private link can open the bill.</small></div></div></>}</>}</section>}
-      <button className="calculate" disabled={draft.people.length < 2} onClick={()=>goTo(2)}>Next: Add expenses <span className="nav-arrow">›</span></button>
+      <button className="calculate" disabled={draft.people.length < 2} onClick={()=>goTo(3)}>Next: Add expenses <span className="nav-arrow">›</span></button>
     </>}
 
-    {draft.step === 2 && <>
+    {draft.step === 3 && <>
       <section className="panel section-panel receipt-scanner">
         <div className="section-heading"><div><span className="step-number">⌁</span><h2>Scan receipt</h2></div>{scanBusy&&<span className="amount-badge">{scanProgress}%</span>}</div>
         <p className="empty-note">Take a clear, straight photo. You will review every detected item before it is added.</p>
@@ -1303,10 +1311,10 @@ export default function Home() {
         <div className="setting-card tip-control"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})}><i></i></button><div><strong>Tip</strong></div>{draft.tipEnabled&&<><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div><input className="tip-value" inputMode="decimal" value={draft.tipValue ? (draft.tipMode==="amount"?draft.tipValue/100:draft.tipValue) : ""} onChange={(e)=>setDraft({...draft,tipValue:draft.tipMode==="amount"?toCents(e.target.value):Number(e.target.value)||0})} placeholder="0" /></>}</div>
         <div className="setting-card discount-control"><div><strong>Discount</strong></div><div className="discount-tools"><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div><div className="money-input"><span>$</span><input inputMode="decimal" value={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></div></div>
       </div>}</section>
-      <div className="page-actions">{!guestParticipantId&&<button className="back-button" onClick={()=>goTo(1)}><span className="nav-arrow">‹</span> Back</button>}<button className="calculate" disabled={!draft.expenses.length} onClick={()=>goTo(3)}>Next: Assign items <span className="nav-arrow">›</span></button></div>
+      <div className="page-actions">{!guestParticipantId&&<button className="back-button" onClick={()=>goTo(2)}><span className="nav-arrow">‹</span> Back</button>}<button className="calculate" disabled={!draft.expenses.length} onClick={()=>goTo(4)}>Next: Assign items <span className="nav-arrow">›</span></button></div>
     </>}
 
-    {draft.step === 3 && <>
+    {draft.step === 4 && <>
       <p className="assign-instruction">{guestParticipantId?"Review everyone sharing each item. You can change only your own selection and quantity.":"Choose everyone who shared each item."}</p>
       <section className="assignment-list">{draft.expenses.map((item,index) => {
         const isAll = item.consumers.length === draft.people.length;
@@ -1316,12 +1324,12 @@ export default function Home() {
           <div className="assignment-options">{!guestParticipantId&&<button className={`all-option ${isAll ? "selected" : ""}`} onClick={()=>toggleAll(item.id)}><i>{isAll ? "✓" : ""}</i><strong>All</strong></button>}{draft.people.map((p) => {const checked=item.consumers.includes(p.id);const quantity=Math.max(1,item.quantities?.[p.id]||1);const canEditPerson=!guestParticipantId||p.id===guestPersonId;return <div className={`assignment-person ${canEditPerson?"":"read-only"}`} key={p.id}><button disabled={!canEditPerson} className={checked?"selected person-selected":""} style={checked&&canEditPerson?{borderColor:p.color,borderWidth:2,color:p.color,boxShadow:`inset 0 0 18px ${p.color}24, 0 0 0 1px ${p.color}55`}:undefined} onClick={()=>toggleConsumer(item.id,p.id)}><i style={checked&&canEditPerson?{background:p.color,borderColor:p.color,color:"#132026"}:undefined}>{checked?"✓":""}</i><span style={{background:canEditPerson?p.color:"var(--muted)"}}>{p.name[0].toUpperCase()}</span><strong>{p.name}</strong></button>{checked&&(canEditPerson?<div className="quantity-stepper" style={{borderColor:p.color}}><button onClick={()=>setItemQuantity(item.id,p.id,quantity-1)} aria-label={`Decrease ${p.name}'s quantity`}>−</button><b>{quantity}</b><button onClick={()=>setItemQuantity(item.id,p.id,quantity+1)} aria-label={`Increase ${p.name}'s quantity`}>+</button></div>:<span className="quantity-readonly">Qty {quantity}</span>)}</div>})}</div>
           {!item.consumers.length && <small className="unassigned-label">Choose at least one person</small>}
         </article>})}</section>
-      <div className="page-actions"><button className="back-button" onClick={()=>goTo(2)}><span className="nav-arrow">‹</span> Back</button><button className="calculate" disabled={!guestParticipantId&&unassigned>0} onClick={()=>goTo(4)}>Next: Results <span className="nav-arrow">›</span></button></div>
+      <div className="page-actions"><button className="back-button" onClick={()=>goTo(3)}><span className="nav-arrow">‹</span> Back</button><button className="calculate" disabled={!guestParticipantId&&unassigned>0} onClick={()=>goTo(5)}>Next: Results <span className="nav-arrow">›</span></button></div>
     </>}
 
-    {draft.step === 4 && <>
-      <section className="page-title result-title"><span className="eyebrow">STEP 4 OF 4</span><h1>{savedTitle}</h1><p>{displayDate(draft.dateTime)} · {draft.people.length} people · {draft.expenses.length} items</p></section>
-      {unassigned>0&&<section className="panel unassigned-results-warning"><div className="warning-symbol">!</div><h2>One or more items have not been selected by anyone.</h2><p>Assign every item before viewing the final amounts.</p><button onClick={()=>goTo(3)}>Go back and assign items</button></section>}
+    {draft.step === 5 && <>
+      <section className="page-title result-title"><span className="eyebrow">STEP 5 OF 5</span><h1>{savedTitle}</h1><p>{displayDate(draft.dateTime)} · {draft.people.length} people · {draft.expenses.length} items</p></section>
+      {unassigned>0&&<section className="panel unassigned-results-warning"><div className="warning-symbol">!</div><h2>One or more items have not been selected by anyone.</h2><p>Assign every item before viewing the final amounts.</p><button onClick={()=>goTo(4)}>Go back and assign items</button></section>}
       <section className={`panel result-overview ${unassigned>0?"results-hidden":""}`}>
         <div className="grand-total editable-total"><span>Final bill total</span>{editingTotal?<div className="total-editor"><div className="money-input total-input"><span>$</span><input autoFocus inputMode="decimal" value={totalText} placeholder={((draft.totalOverrideCents || totals.calculatedGrand) / 100).toFixed(2)} onChange={(e)=>setTotalText(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&applyTotalEdit()} /></div><button onClick={()=>setEditingTotal(false)}>Cancel</button><button className="apply-total" onClick={applyTotalEdit}>Apply</button></div>:<button className="total-display" onClick={beginTotalEdit}>{money(totals.grand)} <small>Edit</small></button>}{draft.totalOverrideCents>totals.calculatedGrand&&<button onClick={()=>setDraft({...draft,totalOverrideCents:0})}>Reset to {money(totals.calculatedGrand)}</button>}<small>{money(subtotal)} subtotal · {money(totals.tax)} tax · {money(totals.tip)} tip{totals.discount?` · −${money(totals.discount)} discount ${draft.discountTiming}`:""}</small></div>
         {draft.restaurant&&<div className="result-restaurant"><span>Paying restaurant</span><strong>{draft.restaurant.name}{draft.restaurant.locationName?` — ${draft.restaurant.locationName}`:""}</strong><small>{draft.restaurant.address}, {draft.restaurant.city}, {draft.restaurant.region}</small></div>}
@@ -1398,7 +1406,7 @@ export default function Home() {
         <div className="setting-card discount-control"><div><strong>Discount</strong></div><div className="discount-tools"><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div><div className="money-input"><span>$</span><input inputMode="decimal" defaultValue={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></div></div>
       </div>}</section>
       {resultsQrCode&&unassigned===0&&<section className="panel results-qr-card"><div><strong>Scan to view results</strong><small>Open assignments and each person’s private result.</small></div><div className="results-qr-wrap"><img src={resultsQrCode} alt="QR code for the shared bill results" /></div></section>}
-      <div className={`page-actions result-page-actions ${canShareResults?"has-share-results":""}`}><button className="back-button" onClick={()=>goTo(3)}><span className="nav-arrow">‹</span> Back</button>{canShareResults&&<button className="share-results-button" disabled={sharing} onClick={()=>void shareResults()}>{sharing?"Saving latest results…":"Share results"}</button>}<button className="new-bill" onClick={finishBill}>Finish bill &amp; start new</button></div>
+      <div className={`page-actions result-page-actions ${canShareResults?"has-share-results":""}`}><button className="back-button" onClick={()=>goTo(4)}><span className="nav-arrow">‹</span> Back</button>{canShareResults&&<button className="share-results-button" disabled={sharing} onClick={()=>void shareResults()}>{sharing?"Saving latest results…":"Share results"}</button>}<button className="new-bill" onClick={finishBill}>Finish bill &amp; start new</button></div>
     </>}
     <footer><span className={`save-status ${saveStatus}`} title={cloudError}>{saveStatus === "saving" ? "Saving to cloud…" : saveStatus === "saved" ? "✓ Saved to cloud" : saveStatus === "offline" ? `Cloud error — ${cloudError || "saved on this device"}` : "Saved automatically on this device"}</span><span>{savedTitle}</span></footer>
   </div></main>;
