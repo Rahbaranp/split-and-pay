@@ -31,7 +31,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.12";
+const APP_VERSION = "0.1.13";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -1278,9 +1278,10 @@ export default function Home() {
       <section className="panel title-time single-title"><div className="title-field"><input disabled={Boolean(guestParticipantId)} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Restaurant or bill name (optional)" /><div className="saved-title-row"><small>Saved as: {savedTitle}</small></div></div></section>
       {draft.restaurant&&<section className="panel bill-restaurant-card"><span className="restaurant-confirm-icon">⌂</span><div><small>PAYING RESTAURANT</small><strong>{draft.restaurant.name}{draft.restaurant.locationName?` — ${draft.restaurant.locationName}`:""}</strong><span>{draft.restaurant.address}, {draft.restaurant.city}, {draft.restaurant.region} {draft.restaurant.postalCode}</span></div><button onClick={()=>setDraft((current)=>{const next={...current};delete next.restaurant;return next;})}>Change</button></section>}
       <section className="panel section-panel">
-        <div className="participant-control-row"><button className="section-heading groups-trigger" onClick={() => { if (guestParticipantId) return; if (!userId) setAccountOpen(true); else { setEditingGroup(null); setGroupsOpen(true); } }} disabled={Boolean(guestParticipantId)}><strong>Who’s splitting?</strong><span className="collapse-chevron" aria-hidden="true">⌄</span></button>{!guestParticipantId&&<button className="group-save" onClick={saveCurrentGroup}>Save group</button>}</div>
+        <div className="participant-control-row"><button className="section-heading groups-trigger" onClick={() => { if (guestParticipantId) return; if (!userId) setAccountOpen(true); else { setEditingGroup(null); setGroupsOpen(true); } }} disabled={Boolean(guestParticipantId)}><strong>Who’s splitting?</strong><span className="collapse-chevron" aria-hidden="true">⌄</span></button></div>
         {!guestParticipantId && <div className="add-row"><div className="contact-entry"><input value={personName} onChange={(e) => setPersonName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPerson()} placeholder="Enter a name" autoComplete="off" />{contactSuggestions.length > 0 && <div className="contact-suggestions">{contactSuggestions.map((contact) => <button key={contact.id} onClick={() => addSavedContact(contact)}><span>{contact.name[0].toUpperCase()}</span><strong>{contact.name}</strong>{contact.phone && <small>{contact.phone}</small>}</button>)}</div>}</div><div className="add-action"><span>{draft.people.length} people</span><button className="add-button" onClick={addPerson}>Add</button></div></div>}
         {draft.people.length ? <div className="people-list">{draft.people.map((p) => <button className="person-chip" disabled={Boolean(guestParticipantId)} key={p.id} onClick={() => removePerson(p.id)}><span style={{background:p.color}}>{p.name[0].toUpperCase()}</span><em>{p.name}</em>{!guestParticipantId&&<b>×</b>}</button>)}</div> : <p className="empty-note">Add at least two people.</p>}
+        {!guestParticipantId&&<button className="group-save-bottom" onClick={saveCurrentGroup}>Save group</button>}
       </section>
       <section className="panel section-panel page-one-expenses" aria-hidden="true">
         <div className="section-heading"><div><span className="step-number">2</span><h2>Add expenses</h2></div><span className="amount-badge">{money(subtotal)}</span></div>
