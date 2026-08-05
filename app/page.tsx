@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.15";
+const APP_VERSION = "0.1.16";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -1259,8 +1259,8 @@ export default function Home() {
     {draft.step === 1 && <section className="start-page">
       <section className="page-title start-title"><span className="eyebrow">RESTAURANT BILL SPLITTER</span><h1>How would you like to begin?</h1><p>You can split a bill immediately without creating an account. Sign in only when you want saved groups and bill history.</p></section>
       <div className="start-options">
-        <article className="panel start-option start-guest"><span className="start-option-icon" aria-hidden="true">$</span><div><small>QUICK START</small><h2>Split &amp; Pay without login</h2><p>Add people, scan or enter the restaurant bill, assign items, and share the final results. No account required.</p></div><button className="calculate" onClick={()=>goTo(2)}>Continue without login <span className="nav-arrow">›</span></button></article>
-        <article className={`panel start-option start-account ${userId?"account-on":"account-off"}`}><span className="start-option-icon" aria-hidden="true">✓</span><div><small>OPTIONAL ACCOUNT</small><h2>Saved groups &amp; bill history</h2><p>{userId?<>Signed in as <strong>{userEmail}</strong>. Your saved account features are available.</>:"Sign in to reuse groups and keep your bill history available on your devices."}</p></div><div className="start-account-actions"><button className="saved-feature-button" disabled={!userId} onClick={()=>{setEditingGroup(null);setGroupsOpen(true);}}>Saved groups</button><button className="saved-feature-button" disabled={!userId} onClick={()=>void loadHistory()}>Saved bills &amp; history</button>{userId?<><button className="google-button" onClick={()=>goTo(2)}>Start a new bill</button><button className="auth-secondary start-signout" onClick={()=>void signOut()}>Log out</button></>:<button className="google-button" onClick={()=>setAccountOpen(true)}>Sign in</button>}</div></article>
+        <article className="panel start-option start-guest"><div className="start-option-heading"><span className="start-option-icon" aria-hidden="true">$</span><small>QUICK START</small></div><div><h2>Split &amp; Pay without signing in</h2><p>Add people, scan or enter the restaurant bill, assign items, and share the final results. No account required.</p></div><button className="calculate" onClick={()=>goTo(2)}>Continue without signing in <span className="nav-arrow">›</span></button></article>
+        <article className={`panel start-option start-account ${userId?"account-on":"account-off"}`}><div className="start-option-heading"><span className="start-option-icon" aria-hidden="true">✓</span><small>OPTIONAL ACCOUNT</small></div><div><h2>Saved groups &amp; bill history</h2><p>{userId?<>Signed in as <strong>{userEmail}</strong>. Your saved account features are available.</>:"Sign in to reuse groups and keep your bill history available on your devices."}</p></div><div className="start-account-actions"><button className="saved-feature-button" disabled={!userId} onClick={()=>{setEditingGroup(null);setGroupsOpen(true);}}>Saved groups</button><button className="saved-feature-button" disabled={!userId} onClick={()=>void loadHistory()}>Saved bills &amp; history</button>{userId?<><button className="google-button" onClick={()=>goTo(2)}>Start a new bill</button><button className="auth-secondary start-signout" onClick={()=>void signOut()}>Sign out</button></>:<button className="google-button" onClick={()=>setAccountOpen(true)}>Sign in</button>}</div></article>
       </div>
     </section>}
 
