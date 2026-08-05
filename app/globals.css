@@ -141,8 +141,18 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .start-option p { margin: 0; color: var(--muted); line-height: 1.6; }
 .start-option > button { width: 100%; min-height: 54px; }
 .start-account { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.start-account-top { flex: 0 0 auto !important; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-state { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; font-size: 11px; font-weight: 900; letter-spacing: .04em; }
+.account-state i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.account-on .account-state { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.account-on .account-state i { background: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent); }
+.account-off { border-color: var(--line); background: color-mix(in srgb, var(--surface) 72%, var(--bg)); }
+.account-off .start-option-icon { background: var(--line); color: var(--muted); }
+.account-off small, .account-off h2, .account-off p { color: var(--muted); }
+.account-off .account-state { color: var(--muted); }
 .start-account-actions { display: grid; gap: 10px; }
 .start-account-actions button { width: 100%; min-height: 50px; }
+.start-signout { color: #ff9f9f; border-color: color-mix(in srgb, #d96868 55%, var(--line)); }
 .error-banner { margin: 14px 0 0; border: 1px solid #d96868; color: #ffb2b2; background: #4c2428; border-radius: 14px; padding: 12px 15px; }
 .notice-banner { margin: 14px 0 0; border: 1px solid var(--accent); color: var(--text); background: var(--surface); border-radius: 14px; padding: 12px 15px; }
 .title-time { padding: 18px; display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,.7fr); gap: 14px; }
