@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { supabase, supabaseConfigured } from "./lib/supabase";
+import { allocateExpenseTotals } from "./lib/allocation";
 
 type Person = { id: string; name: string; color: string };
 type SavedGroupMember = Person & { phone: string; venmoUsername: string; selected?: boolean };
@@ -31,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.14";
+const APP_VERSION = "0.1.15";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -494,19 +495,8 @@ export default function Home() {
     const tip = sharedMode ? 0 : !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? Math.round(draft.tipValue) : Math.round(taxableBase * draft.tipValue / 100);
     const calculatedGrand = sharedMode ? Object.values(finalItemCents).reduce((sum, cents) => sum + cents, 0) : Math.max(0, taxableBase + tax + tip - (draft.discountTiming === "after" ? discount : 0));
     const grand = Math.max(calculatedGrand, draft.totalOverrideCents || 0);
-    const itemOwed: Record<string, number> = Object.fromEntries(draft.people.map((p) => [p.id, 0]));
-    draft.expenses.forEach((item, itemIndex) => {
-      const consumers = draft.people.filter((person) => item.consumers.includes(person.id)).map((person) => person.id);
-      const itemTotal = finalItemCents[item.id] || item.cents;
-      const allocation = allocateWeighted(itemTotal, consumers, item.quantities || {}, itemIndex);
-      Object.entries(allocation).forEach(([id, cents]) => { itemOwed[id] += cents; });
-    });
-    const rawItemOwed: Record<string, number> = Object.fromEntries(draft.people.map((p) => [p.id, 0]));
-    draft.expenses.forEach((item, itemIndex) => {
-      const consumers = draft.people.filter((person) => item.consumers.includes(person.id)).map((person) => person.id);
-      const allocation = allocateWeighted(item.cents, consumers, item.quantities || {}, itemIndex);
-      Object.entries(allocation).forEach(([id, cents]) => { rawItemOwed[id] += cents; });
-    });
+    const itemOwed = allocateExpenseTotals(draft.expenses, draft.people, (item) => finalItemCents[item.id] || item.cents);
+    const rawItemOwed = allocateExpenseTotals(draft.expenses, draft.people, (item) => item.cents);
     const assigned = Object.values(itemOwed).reduce((a, b) => a + b, 0);
     const allocateAdjustment = (total: number) => {
       const result: Record<string, number> = Object.fromEntries(draft.people.map((p) => [p.id, 0]));
