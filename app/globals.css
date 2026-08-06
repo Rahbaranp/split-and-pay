@@ -281,6 +281,12 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .person-result strong.credit { color: var(--accent); }
 .discount-tools { display: flex; align-items: center; gap: 8px; } .discount-tools .money-input { width: 135px; }
 .payer-list { display: grid; gap: 10px; } .payer-box { border: 1px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 8px 12px; } .no-repayment { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding: 9px 0 2px; color: var(--muted); font-size: 13px; }
+.no-repayment-label { display: inline-flex; align-items: center; gap: 8px; }
+.inline-help-button { width: 25px; height: 25px; display: inline-grid; place-items: center; padding: 0; border: 1px solid var(--accent); border-radius: 50%; background: transparent; color: var(--accent); font-size: 15px; font-weight: 900; line-height: 1; }
+.inline-help-button:hover,.inline-help-button:focus-visible { background: var(--accent); color: #073044; }
+.no-repayment-dialog { text-align: left; }
+.no-repayment-dialog .confirm-symbol { margin-left: 0; }
+.no-repayment-dialog .confirm-primary { width: 100%; margin-top: 20px; }
 .balance-breakdown { display: flex; width: 132px; min-height: 48px; flex-direction: column; justify-content: center; align-items: flex-end; gap: 2px; text-align: right; } .balance-breakdown small { color: var(--muted); } .balance-breakdown > strong { display: block; min-width: 100%; text-align: right; }
 .settle-card { margin-top: 14px; } .settle-list { display: grid; gap: 8px; } .settle-list .settlement { margin: 0; }
 .settlement-person-buttons { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }

@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.44";
+const APP_VERSION = "0.1.45";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -160,6 +160,7 @@ export default function Home() {
   const [advanced, setAdvanced] = useState(false);
   const [preferencePersonId, setPreferencePersonId] = useState("");
   const [itemsPersonId, setItemsPersonId] = useState("");
+  const [noRepaymentHelpOpen, setNoRepaymentHelpOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [shareLink, setShareLink] = useState("");
@@ -1278,6 +1279,7 @@ export default function Home() {
     <nav className="progress five-steps" aria-label="Bill steps">{([[1,"Start"],[2,"Group"],[3,"Expenses"],[4,"Assign"],[5,"Results"]] as const).map(([n,label]) => <button key={n} className={`${draft.step === n ? "active" : ""} ${draft.step > n ? "done" : ""}`} onClick={() => n < draft.step && !guestParticipantId && goTo(n)}><b>{draft.step > n ? "✓" : n}</b><span>{label}</span></button>)}</nav>
     {preferencePersonId&&(()=>{const person=draft.people.find((p)=>p.id===preferencePersonId);if(!person)return null;return <div className="account-backdrop" onMouseDown={()=>setPreferencePersonId("")}><section className="panel preference-dialog" role="dialog" aria-modal="true" onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setPreferencePersonId("")}>×</button><h2>{person.name}’s settlement preferences</h2><p>Choose people in preferred order. Tap again to remove.</p><div className="preference-person"><div>{draft.people.filter((other)=>other.id!==person.id).map((other)=>{const rank=(draft.settlementPreferences[person.id]||[]).indexOf(other.id);return <button className={rank>=0?"selected":""} key={other.id} onClick={()=>toggleSettlementPreference(person.id,other.id)}><i style={{background:other.color}}>{other.name[0].toUpperCase()}</i><span>{other.name}</span>{rank>=0&&<b>{rank+1}</b>}</button>})}</div></div><button className="google-button" onClick={()=>setPreferencePersonId("")}>Done</button></section></div>})()}
     {itemsPersonId&&(()=>{const person=draft.people.find((p)=>p.id===itemsPersonId);if(!person)return null;const details=personItemDetails(person.id);const items=draft.expenses.map((item,index)=>({item,index})).filter(({item})=>item.consumers.includes(person.id));return <div className="account-backdrop" onMouseDown={()=>setItemsPersonId("")}><section className="panel person-items-dialog" role="dialog" aria-modal="true" aria-label={`${person.name}'s items`} onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setItemsPersonId("")}>×</button><h2>{person.name}’s items</h2><div className="person-items-list">{items.map(({item,index})=>{const detail=details[item.id];return <div key={item.id}><span><strong>{item.name||`Item ${index+1}`}</strong><small>{detail.quantity} of {detail.totalQuantity} · {detail.percent.toFixed(detail.percent%1?1:0)}%</small></span><b>{money(detail.cents)}</b></div>})}</div><button className="google-button" onClick={()=>setItemsPersonId("")}>Done</button></section></div>})()}
+    {noRepaymentHelpOpen&&<div className="account-backdrop confirm-backdrop" role="presentation" onMouseDown={()=>setNoRepaymentHelpOpen(false)}><section className="panel confirm-dialog no-repayment-dialog" role="dialog" aria-modal="true" aria-labelledby="no-repayment-help-title" onMouseDown={(event)=>event.stopPropagation()}><div className="confirm-symbol">?</div><h2 id="no-repayment-help-title">What does “No repayment” mean?</h2><p>When this is turned on, this person will not make any payment or receive any refund later. The final settlement will not include a repayment to or from this person.</p><button className="confirm-primary" onClick={()=>setNoRepaymentHelpOpen(false)}>Got it</button></section></div>}
     {notice && <div className="notice-banner">{notice}</div>}
     {error && <div className="error-banner">{error}</div>}
     {cloudShareToken && !guestParticipantId && ready && <div className="account-backdrop"><section className="account-panel panel" role="dialog" aria-modal="true" aria-label="Choose your name"><img src="/bill-splitter-icon.png" alt="" /><h2>Who are you?</h2><p>Choose your name to join this shared bill. Names already in use are locked.</p><div className="join-people">{draft.people.map((person) => { const occupied=claimedNames.some((name)=>name.toLowerCase()===person.name.toLowerCase()); return <button key={person.id} disabled={occupied} onClick={() => claimParticipant(person.name)}><span style={{background:person.color}}>{person.name[0]}</span>{person.name}{occupied&&<small>In use</small>}</button>})}</div></section></div>}
@@ -1414,7 +1416,7 @@ export default function Home() {
             <div className="payment-box-heading"><span style={{background:person.color}}><img src="/icons/payment-icon.png" alt="" /></span><h3 style={{color:person.color}}>Payment</h3></div>
             <div className="person-control-section">
               <label className="person-money-row"><span>How much paid</span><div className="money-input"><span>$</span><input inputMode="decimal" value={alreadyPaid/100||""} onChange={(event)=>setDraft((current)=>({...current,payments:{...current.payments,[person.id]:toCents(event.target.value)}}))} placeholder="0.00" /></div></label>
-              <div className="person-switch-row"><span>No repayment</span><button className={`switch ${draft.noRepayment[person.id]?"on":""}`} onClick={()=>setDraft((current)=>({...current,noRepayment:{...current.noRepayment,[person.id]:!current.noRepayment[person.id]}}))} aria-label={`No repayment for ${person.name}`}><i></i></button></div>
+              <div className="person-switch-row"><span className="no-repayment-label"><button type="button" className="inline-help-button" onClick={()=>setNoRepaymentHelpOpen(true)} aria-label="Explain no repayment">?</button><span>No repayment</span></span><button className={`switch ${draft.noRepayment[person.id]?"on":""}`} onClick={()=>setDraft((current)=>({...current,noRepayment:{...current.noRepayment,[person.id]:!current.noRepayment[person.id]}}))} aria-label={`No repayment for ${person.name}`}><i></i></button></div>
             </div>
             {!draft.noRepayment[person.id]&&<>
             <div className="person-control-section">
