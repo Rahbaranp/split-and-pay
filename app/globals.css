@@ -314,7 +314,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .groups-trigger .collapse-chevron { position: absolute; right: 8px; bottom: 2px; }
 .groups-trigger:hover .collapse-chevron { color: var(--accent); }
 .groups-trigger:disabled { cursor: default; opacity: 1; }
-.groups-panel { position: relative; width: min(100%,520px); padding: 24px; }
+.groups-panel { position: relative; width: min(100%,520px); max-height: calc(100dvh - 36px); overflow-y: auto; overscroll-behavior: contain; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); }
 .groups-panel h2 { margin: 0 0 20px; }
 .groups-panel select { min-width: 0; width: 100%; }
 .saved-group-cards { display: grid; gap: 10px; max-height: min(60vh,480px); overflow-y: auto; }
@@ -503,6 +503,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .saved-group-cards .saved-group-main { border: 0; border-radius: 0; }
 .group-signin p,.group-editor > p,.group-placeholder { color: var(--muted); line-height: 1.5; }
 .group-editor { display: grid; gap: 15px; }
+.group-add-person { width: 100%; min-height: 48px; border: 1px solid var(--accent); border-radius: 14px; background: color-mix(in srgb,var(--accent) 12%,var(--surface-2)); color: var(--accent); font-weight: 900; }
 .group-editor label > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .group-member-list { display: grid; gap: 10px; max-height: min(50vh,430px); overflow-y: auto; }
 .group-member-list article { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
@@ -513,7 +514,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .group-venmo { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); padding-left: 10px; }
 .group-venmo span { color: var(--muted); }
 .group-venmo input { border: 0; background: transparent; box-shadow: none; }
-.group-editor-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.group-editor-actions { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; padding-top: 10px; background: var(--surface); }
 .group-editor-actions button { min-height: 46px; margin: 0; }
 .danger-button { border: 1px solid #d96868; border-radius: 13px; background: transparent; color: #ff9f9f; font-weight: 800; }
 .shared-invite-panel { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; }
