@@ -446,7 +446,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .share-content { grid-template-columns: 1fr; } .qr-wrap { width: fit-content; margin: 0 auto; } .share-card .share-link { grid-template-columns: 1fr; }
   .topbar { min-height: 110px; grid-template-columns: 78px minmax(0, 1fr) 78px; padding: 8px 10px; }
   .brand-copy strong { font-size: clamp(24px, 7.4vw, 32px); }
-  .topbar > .theme-button { width: 38px; height: 58px; transform: translateY(50px); }
+  .topbar > .theme-button { width: 38px; height: 58px; transform: translateY(82px); }
   .progress.five-steps button { font-size: 9px; padding-inline: 2px; }
   .account-button { padding: 8px; font-size: 12px; }
 }
