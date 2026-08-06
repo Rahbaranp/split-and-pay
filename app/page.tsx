@@ -1273,7 +1273,7 @@ export default function Home() {
   if (!ready) return null;
   return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""} ${draft.step===3?"expenses-step":""}`}><div className="app-shell">
     <header className="topbar">
-      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img src="/bill-splitter-icon.png" alt="" /></button>
+      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img src={draft.theme === "light" ? "/bill-splitter-icon-day.png" : "/bill-splitter-icon.png"} alt="" /></button>
       <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Scan, split & settle restaurant bills</span></div>
       <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
     </header>
