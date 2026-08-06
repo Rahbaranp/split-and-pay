@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.22";
+const APP_VERSION = "0.1.23";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -676,8 +676,9 @@ export default function Home() {
     const venmoUsernames: Record<string, string> = {};
     people.forEach((person, index) => { phones[person.id] = chosen[index].phone; venmoUsernames[person.id] = chosen[index].venmoUsername; });
     setCurrentPhones(phones);
-    setDraft((current) => ({ ...current, people, expenses: [], payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames }));
+    setDraft((current) => ({ ...current, people, expenses: [], payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames, step: 2 }));
     setGroupsOpen(false); setEditingGroup(null); setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function shareBillInvite() {
     if (!shareLink) { setError("Turn on bill sharing first."); return; }
