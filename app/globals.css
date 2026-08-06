@@ -225,6 +225,18 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .control-stack { display: grid; gap: 10px; }
 .setting-card { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface-2); }
 .setting-card > div:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 2px; } .setting-card small { color: var(--muted); }
+.adjustment-cards { margin-bottom: 14px; }
+.adjustment-card { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.65fr); align-items: end; gap: 14px 20px; padding: 18px; border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.09); }
+.adjustment-card-head { grid-column: 1 / -1; display: flex; flex-direction: row !important; align-items: center; gap: 12px !important; }
+.adjustment-card-head > strong { font-size: 22px; }
+.adjustment-entry,.adjustment-calculated { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.adjustment-entry > span,.adjustment-calculated > span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.adjustment-entry .compact-value { width: 100%; }
+.adjustment-entry .compact-value input { width: 100%; }
+.adjustment-entry > .segment { width: fit-content; }
+.adjustment-calculated { align-items: flex-end; text-align: right; }
+.adjustment-calculated > strong { color: var(--text); font-size: 22px; }
+.adjustment-discount-entry .money-input { width: 100%; }
 .switch { width: 45px; height: 26px; padding: 3px; border: 0; border-radius: 99px; background: var(--line); }
 .switch i { display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; } .switch.on { background: var(--accent); } .switch.on i { transform: translateX(19px); }
 .compact-value { display: flex; align-items: center; gap: 4px; } .compact-value input { width: 86px; margin: 0; text-align: right; }

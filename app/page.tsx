@@ -17,7 +17,7 @@ type Draft = {
   cloudId?: string;
   title: string; dateTime: string; people: Person[]; expenses: Expense[];
   taxEnabled: boolean; taxRate: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number;
-  discountCents: number; discountTiming: "before" | "after"; participantAdjustments: Record<string, ParticipantAdjustment>; totalOverrideCents: number; payments: Record<string, number>; noRepayment: Record<string, boolean>; canPayMerchant: Record<string, boolean>; settlementPreferences: Record<string, string[]>; venmoUsernames: Record<string, string>; theme: "dark" | "light"; step: 1 | 2 | 3 | 4 | 5;
+  discountEnabled: boolean; discountCents: number; discountTiming: "before" | "after"; participantAdjustments: Record<string, ParticipantAdjustment>; totalOverrideCents: number; payments: Record<string, number>; noRepayment: Record<string, boolean>; canPayMerchant: Record<string, boolean>; settlementPreferences: Record<string, string[]>; venmoUsernames: Record<string, string>; theme: "dark" | "light"; step: 1 | 2 | 3 | 4 | 5;
   restaurant?: RestaurantRef;
 };
 type CloudBill = { id: string; title: string; occurred_at: string; status: "open" | "locked" | "archived"; updated_at: string; settings: { draft?: Draft } };
@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.24";
+const APP_VERSION = "0.1.25";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -48,14 +48,14 @@ const localNow = () => {
 };
 const initialDraft: Draft = {
   flowVersion: 5, title: "", dateTime: localNow(), people: [], expenses: [], taxEnabled: false, taxRate: 0,
-  tipEnabled: false, tipMode: "percent", tipValue: 0, discountCents: 0, discountTiming: "before", participantAdjustments: {}, totalOverrideCents: 0, payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames: {}, theme: "dark", step: 1,
+  tipEnabled: false, tipMode: "percent", tipValue: 0, discountEnabled: false, discountCents: 0, discountTiming: "before", participantAdjustments: {}, totalOverrideCents: 0, payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames: {}, theme: "dark", step: 1,
 };
 const normalizeDraft = (value: Partial<Draft>): Draft => {
   const legacyStep = value.step || 1;
   const step = value.flowVersion === 5 ? legacyStep : value.flowVersion === 4 ? Math.min(5, legacyStep + 1) : legacyStep === 2 ? 4 : legacyStep === 3 ? 5 : 2;
   const people = (value.people || []).map((person, index) => ({ ...person, color: ["#86efac", "#65d69a"].includes(person.color.toLowerCase()) ? COLORS[index % COLORS.length] : person.color }));
   const expenses = (value.expenses || []).map((item) => ({ ...item, splitEqually: false, quantities: Object.fromEntries(item.consumers.map((id) => [id, Math.max(1, item.quantities?.[id] || 1)])) }));
-  return { ...initialDraft, ...value, people, expenses, flowVersion: 5, step } as Draft;
+  return { ...initialDraft, ...value, people, expenses, discountEnabled: value.discountEnabled ?? Boolean(value.discountCents), flowVersion: 5, step } as Draft;
 };
 const emptyRestaurantForm: RestaurantForm = { name: "", locationName: "", address: "", city: "", region: "", postalCode: "", phone: "" };
 
@@ -99,7 +99,7 @@ function savedDraftTotal(value?: Draft) {
     });
   } else {
     const subtotal = draft.expenses.reduce((sum, item) => sum + item.cents, 0);
-    const discount = Math.min(draft.discountCents, subtotal);
+    const discount = draft.discountEnabled ? Math.min(draft.discountCents, subtotal) : 0;
     const base = draft.discountTiming === "before" ? subtotal - discount : subtotal;
     const tax = draft.taxEnabled ? Math.round(base * draft.taxRate / 100) : 0;
     const tip = !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? draft.tipValue : Math.round(base * draft.tipValue / 100);
@@ -386,7 +386,7 @@ export default function Home() {
     saveTimer.current = setTimeout(async () => {
       const savedGuest = JSON.parse(localStorage.getItem(`bill-guest-${cloudShareToken}`) || "{}") as { edit_token?: string };
       if (!savedGuest.edit_token) { guestSavePending.current = false; setCloudError("Your participant access has expired."); setSaveStatus("offline"); return; }
-      const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountCents, discountTiming: draft.discountTiming };
+      const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
       const participantDraft = { ...draft, participantAdjustments: { ...draft.participantAdjustments, [guestParticipantId]: adjustment } };
       const { data, error: guestError } = await supabase!.rpc("save_participant_draft", { p_token: cloudShareToken, p_participant_id: guestParticipantId, p_edit_token: savedGuest.edit_token, p_draft: participantDraft });
       if (saveVersion !== guestSaveVersion.current) return;
@@ -448,11 +448,11 @@ export default function Home() {
   const resultsShareToken = organizerShareToken || cloudShareToken || (shareLink ? new URL(shareLink).searchParams.get("share") || "" : "");
   useEffect(() => {
     if (!sharedMode || guestParticipantId) return;
-    const organizerAdjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountCents, discountTiming: draft.discountTiming };
+    const organizerAdjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
     const savedAdjustment = draft.participantAdjustments.organizer;
     if (JSON.stringify(savedAdjustment) === JSON.stringify(organizerAdjustment)) return;
     setDraft((current) => ({ ...current, participantAdjustments: { ...current.participantAdjustments, organizer: organizerAdjustment } }));
-  }, [sharedMode, guestParticipantId, draft.taxEnabled, draft.taxRate, draft.tipEnabled, draft.tipMode, draft.tipValue, draft.discountCents, draft.discountTiming, draft.participantAdjustments]);
+  }, [sharedMode, guestParticipantId, draft.taxEnabled, draft.taxRate, draft.tipEnabled, draft.tipMode, draft.tipValue, draft.discountEnabled, draft.discountCents, draft.discountTiming, draft.participantAdjustments]);
   useEffect(() => {
     if (!resultsShareToken) { setResultsQrCode(""); return; }
     const resultsLink = `${window.location.origin}/?share=${resultsShareToken}&results=1`;
@@ -465,7 +465,7 @@ export default function Home() {
       const items = draft.expenses.filter((item) => (item.addedBy || "organizer") === owner);
       const raw = items.reduce((sum, item) => sum + item.cents, 0);
       if (!raw) return;
-      const live = owner === guestParticipantId || (owner === "organizer" && !guestParticipantId) ? { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountCents, discountTiming: draft.discountTiming } : null;
+      const live = owner === guestParticipantId || (owner === "organizer" && !guestParticipantId) ? { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming } : null;
       const a = live || draft.participantAdjustments[owner] || { taxEnabled: false, taxRate: 0, tipEnabled: false, tipMode: "percent" as const, tipValue: 0, discountCents: 0, discountTiming: "before" as const };
       const discount = Math.min(a.discountCents, raw);
       const base = a.discountTiming === "before" ? raw - discount : raw;
@@ -487,7 +487,7 @@ export default function Home() {
   }, [sharedMode, guestParticipantId, currentPersonId, draft.step, draft.payments, draft.expenses, finalItemCents]);
 
   const totals = useMemo(() => {
-    const discount = sharedMode ? 0 : Math.min(draft.discountCents, subtotal);
+    const discount = sharedMode || !draft.discountEnabled ? 0 : Math.min(draft.discountCents, subtotal);
     const taxableBase = draft.discountTiming === "before" ? subtotal - discount : subtotal;
     const tax = sharedMode ? 0 : draft.taxEnabled ? Math.round(taxableBase * draft.taxRate / 100) : 0;
     const tip = sharedMode ? 0 : !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? Math.round(draft.tipValue) : Math.round(taxableBase * draft.tipValue / 100);
@@ -581,7 +581,7 @@ export default function Home() {
   }, [draft.people,draft.payments,draft.noRepayment,draft.canPayMerchant,draft.settlementPreferences,totals.remainingToMerchant,totals.owed]);
   const currentReceiptOwner = guestParticipantId || "organizer";
   const ownReceiptSubtotal = draft.expenses.filter((item) => !sharedMode || (item.addedBy || "organizer") === currentReceiptOwner).reduce((sum, item) => sum + item.cents, 0);
-  const ownReceiptDiscount = Math.min(draft.discountCents, ownReceiptSubtotal);
+  const ownReceiptDiscount = draft.discountEnabled ? Math.min(draft.discountCents, ownReceiptSubtotal) : 0;
   const ownReceiptBase = draft.discountTiming === "before" ? ownReceiptSubtotal - ownReceiptDiscount : ownReceiptSubtotal;
   const ownReceiptTax = draft.taxEnabled ? Math.round(ownReceiptBase * draft.taxRate / 100) : 0;
   const ownReceiptTip = !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? draft.tipValue : Math.round(ownReceiptBase * draft.tipValue / 100);
@@ -700,7 +700,7 @@ export default function Home() {
       if (cloudShareToken && guestParticipantId) {
         const savedGuest = JSON.parse(localStorage.getItem(`bill-guest-${cloudShareToken}`) || "{}") as { edit_token?: string };
         if (!savedGuest.edit_token) throw new Error("Your participant access has expired. Choose your name again before sharing.");
-        const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountCents, discountTiming: draft.discountTiming };
+        const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
         const participantDraft = { ...draft, participantAdjustments: { ...draft.participantAdjustments, [guestParticipantId]: adjustment } };
         const { error: saveError } = await supabase.rpc("save_participant_draft", { p_token: cloudShareToken, p_participant_id: guestParticipantId, p_edit_token: savedGuest.edit_token, p_draft: participantDraft });
         if (saveError) throw new Error(saveError.message);
@@ -1298,11 +1298,11 @@ export default function Home() {
         <div className="section-heading entry-items-heading"><div><span className="step-number">+</span><h2>Enter items</h2><small className="item-count">{draft.expenses.length} {draft.expenses.length===1?"item":"items"}</small></div><span className="amount-badge">{money(subtotal)}</span></div>
         <div className="expense-entry simple-entry"><div className="expense-inputs"><input value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder="Item name (optional)" /><div className="money-input"><span>$</span><input inputMode="decimal" value={itemAmount} onChange={(e)=>setItemAmount(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addExpense()} placeholder="0.00" /></div></div><button className="wide-secondary" onClick={addExpense}>＋ Add item</button></div>
       </section>
-      <section className={`panel advanced ${advanced?"open":""}`}><button className="advanced-toggle" onClick={()=>setAdvanced(!advanced)}><span><b>%</b><span><small className="adjustment-summary"><span>Tip: {draft.tipEnabled&&draft.tipMode==="percent"?`${draft.tipValue}%`:"0%"}</span><span>Tax: {money(sharedMode?ownReceiptTax:totals.tax)}</span><span>Tip: {money(sharedMode?ownReceiptTip:totals.tip)}</span><span>Discount: {money(sharedMode?ownReceiptDiscount:totals.discount)}</span></small></span></span><span className={`collapse-chevron ${advanced?"open":""}`}>⌄</span></button>{advanced && <div className="advanced-body control-stack">
-        <div className="setting-card"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})}><i></i></button><div><strong>Tax</strong></div>{draft.taxEnabled&&<label className="compact-value"><input type="number" min="0" step="0.01" value={draft.taxRate||""} onChange={(e)=>setDraft({...draft,taxRate:Number(e.target.value)||0})} placeholder="0" /><span>%</span></label>}</div>
-        <div className="setting-card tip-control"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})}><i></i></button><div><strong>Tip</strong></div>{draft.tipEnabled&&<><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div><input className="tip-value" inputMode="decimal" value={draft.tipValue ? (draft.tipMode==="amount"?draft.tipValue/100:draft.tipValue) : ""} onChange={(e)=>setDraft({...draft,tipValue:draft.tipMode==="amount"?toCents(e.target.value):Number(e.target.value)||0})} placeholder="0" /></>}</div>
-        <div className="setting-card discount-control"><div><strong>Discount</strong></div><div className="discount-tools"><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div><div className="money-input"><span>$</span><input inputMode="decimal" value={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></div></div>
-      </div>}</section>
+      <section className="adjustment-cards control-stack" aria-label="Tax, tip and discount">
+        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<label className="adjustment-entry"><span>Percent</span><div className="compact-value"><input type="number" min="0" step="0.01" value={draft.taxRate||""} onChange={(e)=>setDraft({...draft,taxRate:Number(e.target.value)||0})} placeholder="0" /><span>%</span></div></label>}<div className="adjustment-calculated"><span>Amount</span><strong>{money(sharedMode?ownReceiptTax:totals.tax)}</strong></div></div>
+        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<div className="adjustment-entry"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><input inputMode="decimal" value={draft.tipValue||""} onChange={(e)=>setDraft({...draft,tipValue:Number(e.target.value)||0})} placeholder="0" /><span>%</span></div>:<div className="money-input"><span>$</span><input inputMode="decimal" value={draft.tipValue?draft.tipValue/100:""} onChange={(e)=>setDraft({...draft,tipValue:toCents(e.target.value)})} placeholder="0.00" /></div>}</div>}<div className="adjustment-calculated"><span>Amount</span><strong>{money(sharedMode?ownReceiptTip:totals.tip)}</strong></div></div>
+        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><button className={`switch ${draft.discountEnabled?"on":""}`} onClick={()=>setDraft({...draft,discountEnabled:!draft.discountEnabled})} aria-label="Turn discount on or off"><i></i></button><strong>Discount</strong></div>{draft.discountEnabled&&<><div className="adjustment-entry"><span>Apply</span><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div></div><label className="adjustment-calculated adjustment-discount-entry"><span>Amount</span><div className="money-input"><span>$</span><input inputMode="decimal" value={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></label></>}</div>
+      </section>
       <div className="page-actions">{!guestParticipantId&&<button className="back-button" onClick={()=>goTo(2)}><span className="nav-arrow">‹</span> Back</button>}<button className="calculate" disabled={!draft.expenses.length} onClick={()=>goTo(4)}>Next: Assign items <span className="nav-arrow">›</span></button></div>
     </>}
 
