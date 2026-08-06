@@ -527,8 +527,14 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .group-add-person { min-height: 48px; border: 1px solid var(--accent); border-radius: 14px; background: color-mix(in srgb,var(--accent) 12%,var(--surface-2)); color: var(--accent); font-weight: 900; }
 .group-editor label > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .group-member-list { display: grid; gap: 10px; }
-.group-member-list article { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
-.group-check { width: 22px; height: 22px; margin: 13px 0 0; accent-color: var(--accent); }
+.group-member { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.group-member > summary { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px; min-height: 58px; padding: 10px 13px; cursor: pointer; list-style: none; }
+.group-member > summary::-webkit-details-marker { display: none; }
+.group-member > summary strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-member-chevron { color: var(--muted); font-size: 20px; transition: transform .2s; }
+.group-member[open] .group-member-chevron { transform: rotate(180deg); }
+.group-member > .group-member-fields { padding: 0 13px 13px 47px; }
+.group-check { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
 .group-member-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .group-member-fields input { min-width: 0; margin: 0; }
 .group-member-fields > input:first-child { grid-column: 1 / -1; font-weight: 800; }
