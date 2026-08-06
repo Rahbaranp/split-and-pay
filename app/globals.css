@@ -227,8 +227,10 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .setting-card > div:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 2px; } .setting-card small { color: var(--muted); }
 .adjustment-cards { margin-bottom: 14px; }
 .adjustment-card { display: grid; grid-template-columns: minmax(0,1fr) minmax(120px,.65fr); align-items: end; gap: 14px 20px; padding: 18px; border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.09); }
-.adjustment-card-head { grid-column: 1 / -1; display: flex; flex-direction: row !important; align-items: center; gap: 12px !important; }
-.adjustment-card-head > strong { font-size: 22px; }
+.adjustment-card-head { grid-column: 1 / -1; display: flex; flex-direction: row !important; align-items: center; justify-content: space-between; gap: 12px !important; }
+.adjustment-card-title { display: flex; flex-direction: row !important; align-items: center; gap: 12px !important; }
+.adjustment-card-title > strong,.adjustment-head-amount { font-size: 22px; }
+.adjustment-head-amount { margin-left: auto; }
 .adjustment-entry,.adjustment-calculated { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .adjustment-entry > span,.adjustment-calculated > span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .adjustment-entry .compact-value { width: 100%; }
@@ -237,6 +239,13 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .adjustment-calculated { align-items: flex-end; text-align: right; }
 .adjustment-calculated > strong { color: var(--text); font-size: 22px; }
 .adjustment-discount-entry .money-input { width: 100%; }
+.tip-entry-line { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.tip-entry-line > .segment,.tip-entry-line > .compact-value,.tip-entry-line > .money-input { width: 100%; min-height: 49px; margin: 0; }
+.tip-entry-line > .segment button { flex: 1; }
+.tip-entry-line > .compact-value input { width: 100%; }
+.tip-presets { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 7px; }
+.tip-presets button { min-height: 42px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--muted); font-weight: 800; }
+.tip-presets button.active { border-color: var(--accent); background: var(--accent); color: #073b25; }
 .switch { width: 45px; height: 26px; padding: 3px; border: 0; border-radius: 99px; background: var(--line); }
 .switch i { display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; } .switch.on { background: var(--accent); } .switch.on i { transform: translateX(19px); }
 .compact-value { display: flex; align-items: center; gap: 4px; } .compact-value input { width: 86px; margin: 0; text-align: right; }
