@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { allocateExpenseTotals } from "./lib/allocation";
+import { minimumPayableTotal, payableTotal } from "./lib/payable-total";
 
 type Person = { id: string; name: string; color: string };
 type SavedGroupMember = Person & { phone: string; venmoUsername: string; selected?: boolean };
@@ -32,7 +33,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.47";
+const APP_VERSION = "0.1.48";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -105,7 +106,7 @@ function savedDraftTotal(value?: Draft) {
     const tip = !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? draft.tipValue : Math.round(base * draft.tipValue / 100);
     calculated = Math.max(0, base + tax + tip - (draft.discountTiming === "after" ? discount : 0));
   }
-  return Math.max(calculated, draft.totalOverrideCents || 0);
+  return payableTotal(calculated, draft.totalOverrideCents || 0);
 }
 
 function billFingerprint(bill: CloudBill) {
@@ -534,7 +535,8 @@ export default function Home() {
     const tax = sharedMode ? 0 : !draft.taxEnabled ? 0 : draft.taxMode === "amount" ? draft.taxAmountCents : Math.round(taxableBase * draft.taxRate / 100);
     const tip = sharedMode ? 0 : !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? Math.round(draft.tipValue) : Math.round(taxableBase * draft.tipValue / 100);
     const calculatedGrand = sharedMode ? Object.values(finalItemCents).reduce((sum, cents) => sum + cents, 0) : Math.max(0, taxableBase + tax + tip - (draft.discountTiming === "after" ? discount : 0));
-    const grand = Math.max(calculatedGrand, draft.totalOverrideCents || 0);
+    const minimumGrand = sharedMode ? calculatedGrand : minimumPayableTotal(calculatedGrand, tip);
+    const grand = payableTotal(calculatedGrand, draft.totalOverrideCents || 0);
     const itemOwed = allocateExpenseTotals(draft.expenses, draft.people, (item) => finalItemCents[item.id] || item.cents);
     const rawItemOwed = allocateExpenseTotals(draft.expenses, draft.people, (item) => item.cents);
     const assigned = Object.values(itemOwed).reduce((a, b) => a + b, 0);
@@ -603,7 +605,7 @@ export default function Home() {
     const outgoing: Record<string, number> = Object.fromEntries(draft.people.map((p) => [p.id, 0]));
     const incoming: Record<string, number> = Object.fromEntries(draft.people.map((p) => [p.id, 0]));
     settlements.forEach((s) => { const from = draft.people.find((p) => p.name === s.from); const to = draft.people.find((p) => p.name === s.to); if (from) outgoing[from.id] += s.cents; if (to) incoming[to.id] += s.cents; });
-    return { discount, tax, tip, calculatedGrand, grand, paidTotal, remainingToMerchant, contribution, itemOwed, rawItemOwed, discountByPerson, shareAfterDiscount, taxByPerson, tipByPerson, originalOwed, owed, merchantPayments, outgoing, incoming, settlements };
+    return { discount, tax, tip, calculatedGrand, minimumGrand, grand, paidTotal, remainingToMerchant, contribution, itemOwed, rawItemOwed, discountByPerson, shareAfterDiscount, taxByPerson, tipByPerson, originalOwed, owed, merchantPayments, outgoing, incoming, settlements };
   }, [draft, subtotal, sharedMode, finalItemCents]);
   const paymentPlan = useMemo(() => {
     const available = draft.people.filter((person) => !draft.noRepayment[person.id] && draft.canPayMerchant[person.id] !== false);
@@ -977,7 +979,7 @@ export default function Home() {
   function applyDifferentTotal(value: string) {
     if (!value.trim()) { setDraft((current) => ({ ...current, totalOverrideCents: 0 })); setError(""); return true; }
     const cents = toCents(value);
-    if (cents < totals.calculatedGrand) { setError(`Enter ${money(totals.calculatedGrand)} or more.`); return false; }
+    if (cents < totals.minimumGrand) { setError(`Enter ${money(totals.minimumGrand)} or more. The bill and tax must be fully covered.`); return false; }
     setDraft((current) => ({ ...current, totalOverrideCents: cents === totals.calculatedGrand ? 0 : cents })); setError(""); return true;
   }
   async function createShareLink() {
@@ -1369,7 +1371,7 @@ export default function Home() {
       <section className="page-title result-title"><span className="eyebrow">STEP 5 OF 5</span><h1>{savedTitle}</h1><p>{displayDate(draft.dateTime)} · {draft.people.length} people · {draft.expenses.length} items</p></section>
       {unassigned>0&&<section className="panel unassigned-results-warning"><div className="warning-symbol">!</div><h2>One or more items have not been selected by anyone.</h2><p>Assign every item before viewing the final amounts.</p><button onClick={()=>goTo(4)}>Go back and assign items</button></section>}
       <section className={`panel result-overview ${unassigned>0?"results-hidden":""}`}>
-        <div className="grand-total"><span>Final bill total</span><strong className={`original-bill-total ${draft.totalOverrideCents>totals.calculatedGrand?"different-total-active":""}`}>{money(totals.calculatedGrand)}</strong>{!guestParticipantId&&<label className="different-total-box"><span>Want to pay a different amount?</span><div className="money-input"><span>$</span><input key={`${totals.calculatedGrand}-${draft.totalOverrideCents}`} inputMode="decimal" defaultValue={draft.totalOverrideCents ? (draft.totalOverrideCents / 100).toFixed(2) : ""} placeholder="Enter amount" aria-label="Different total amount" onBlur={(event)=>{if(!applyDifferentTotal(event.currentTarget.value)) event.currentTarget.value=draft.totalOverrideCents?(draft.totalOverrideCents/100).toFixed(2):"";}} onKeyDown={(event)=>{if(event.key==="Enter") event.currentTarget.blur();}} /></div></label>}<small>{money(subtotal)} subtotal · {money(totals.tax)} tax · {money(totals.tip)} tip{totals.discount?` · −${money(totals.discount)} discount ${draft.discountTiming}`:""}</small></div>
+        <div className="grand-total"><span>Final bill total</span><strong className={`original-bill-total ${draft.totalOverrideCents&&draft.totalOverrideCents!==totals.calculatedGrand?"different-total-active":""}`}>{money(totals.calculatedGrand)}</strong>{!guestParticipantId&&<label className="different-total-box"><span>Want to pay a different amount?</span><div className="money-input"><span>$</span><input key={`${totals.calculatedGrand}-${draft.totalOverrideCents}`} inputMode="decimal" defaultValue={draft.totalOverrideCents ? (draft.totalOverrideCents / 100).toFixed(2) : ""} placeholder="Enter amount" aria-label="Different total amount" onBlur={(event)=>{if(!applyDifferentTotal(event.currentTarget.value)) event.currentTarget.value=draft.totalOverrideCents?(draft.totalOverrideCents/100).toFixed(2):"";}} onKeyDown={(event)=>{if(event.key==="Enter") event.currentTarget.blur();}} /></div></label>}<small>{money(subtotal)} subtotal · {money(totals.tax)} tax · {money(totals.tip)} tip{totals.discount?` · −${money(totals.discount)} discount ${draft.discountTiming}`:""}</small></div>
         {draft.restaurant&&<div className="result-restaurant"><span>Paying restaurant</span><strong>{draft.restaurant.name}{draft.restaurant.locationName?` — ${draft.restaurant.locationName}`:""}</strong><small>{draft.restaurant.address}, {draft.restaurant.city}, {draft.restaurant.region}</small></div>}
         <div className="result-summary">
           <div><span>Total paid</span><strong>{money(totals.paidTotal)}</strong></div>
