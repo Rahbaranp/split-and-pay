@@ -242,18 +242,11 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .discount-timing-entry { align-self: stretch; }
 .discount-timing-entry .segment button { min-height: 52px; padding: 8px 10px; line-height: 1.15; }
 .discount-explanation { grid-column: 1 / -1; color: var(--muted); line-height: 1.4; }
-.tax-adjustment-card .tax-rate-entry { grid-column: 1 / -1; max-width: 210px; }
-.tax-location-lookup { grid-column: 1 / -1; display: grid !important; gap: 8px !important; }
-.tax-location-lookup > span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-.tax-location-fields { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
-.tax-location-fields input { min-width: 0; margin: 0; }
-.tax-location-fields button,.tax-lookup-result button { min-height: 46px; padding: 0 14px; border: 1px solid var(--accent); border-radius: 13px; background: var(--accent); color: #073044; font-weight: 900; }
-.tax-location-fields button:disabled { opacity: .5; cursor: not-allowed; }
-.tax-lookup-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 13px; background: color-mix(in srgb,var(--accent) 9%,var(--surface)); }
-.tax-lookup-result > span { display: grid; gap: 2px; }
-.tax-lookup-result > span > strong { color: var(--accent); font-size: 20px; }
-.tax-lookup-result small,.tax-estimate-note { color: var(--muted); line-height: 1.35; }
-.tax-lookup-error { color: #ff9f9f !important; }
+.tax-entry-line { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.tax-entry-line > .segment,.tax-entry-line > .compact-value,.tax-entry-line > .money-input { width: 100%; min-height: 49px; margin: 0; }
+.tax-entry-line > .segment button { flex: 1; }
+.tax-entry-line > .compact-value input { width: 100%; }
+.tax-entry-note { grid-column: 1 / -1; color: var(--muted); line-height: 1.45; }
 .expenses-step { padding-bottom: 120px; }
 .expense-total-dock { position: fixed; z-index: 20; left: 50%; bottom: max(10px,env(safe-area-inset-bottom)); width: min(calc(100% - 18px),700px); overflow: hidden; border: 1px solid var(--accent); border-radius: 17px; background: color-mix(in srgb,var(--surface) 96%,transparent); box-shadow: 0 14px 45px rgba(0,0,0,.36); transform: translateX(-50%); backdrop-filter: blur(12px); }
 .expense-total-toggle { display: grid; grid-template-columns: minmax(0,1fr) auto 24px; align-items: center; gap: 12px; width: 100%; min-height: 66px; padding: 12px 16px; border: 0; background: transparent; color: var(--text); text-align: left; }

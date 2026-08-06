@@ -8,7 +8,7 @@ import { allocateExpenseTotals } from "./lib/allocation";
 type Person = { id: string; name: string; color: string };
 type SavedGroupMember = Person & { phone: string; venmoUsername: string; selected?: boolean };
 type Expense = { id: string; name: string; cents: number; consumers: string[]; addedBy?: string; addedByName?: string; splitEqually?: boolean; quantities?: Record<string, number> };
-type ParticipantAdjustment = { taxEnabled: boolean; taxRate: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number; discountCents: number; discountTiming: "before" | "after" };
+type ParticipantAdjustment = { taxEnabled: boolean; taxMode: "percent" | "amount"; taxRate: number; taxAmountCents: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number; discountCents: number; discountTiming: "before" | "after" };
 type RestaurantRef = { id: string; name: string; locationName: string; address: string; city: string; region: string; postalCode: string };
 type RegisteredRestaurant = RestaurantRef & { phone: string; publicCode: string; active: boolean };
 type RestaurantForm = { name: string; locationName: string; address: string; city: string; region: string; postalCode: string; phone: string };
@@ -16,7 +16,7 @@ type Draft = {
   flowVersion?: 5;
   cloudId?: string;
   title: string; dateTime: string; people: Person[]; expenses: Expense[];
-  taxEnabled: boolean; taxRate: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number;
+  taxEnabled: boolean; taxMode: "percent" | "amount"; taxRate: number; taxAmountCents: number; tipEnabled: boolean; tipMode: "percent" | "amount"; tipValue: number;
   discountEnabled: boolean; discountCents: number; discountTiming: "before" | "after"; participantAdjustments: Record<string, ParticipantAdjustment>; totalOverrideCents: number; payments: Record<string, number>; noRepayment: Record<string, boolean>; canPayMerchant: Record<string, boolean>; settlementPreferences: Record<string, string[]>; venmoUsernames: Record<string, string>; theme: "dark" | "light"; step: 1 | 2 | 3 | 4 | 5;
   restaurant?: RestaurantRef;
 };
@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.39";
+const APP_VERSION = "0.1.40";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -47,7 +47,7 @@ const localNow = () => {
   return d.toISOString().slice(0, 16);
 };
 const initialDraft: Draft = {
-  flowVersion: 5, title: "", dateTime: localNow(), people: [], expenses: [], taxEnabled: false, taxRate: 0,
+  flowVersion: 5, title: "", dateTime: localNow(), people: [], expenses: [], taxEnabled: false, taxMode: "percent", taxRate: 0, taxAmountCents: 0,
   tipEnabled: false, tipMode: "percent", tipValue: 0, discountEnabled: false, discountCents: 0, discountTiming: "before", participantAdjustments: {}, totalOverrideCents: 0, payments: {}, noRepayment: {}, canPayMerchant: {}, settlementPreferences: {}, venmoUsernames: {}, theme: "dark", step: 1,
 };
 const normalizeDraft = (value: Partial<Draft>): Draft => {
@@ -55,7 +55,7 @@ const normalizeDraft = (value: Partial<Draft>): Draft => {
   const step = value.flowVersion === 5 ? legacyStep : value.flowVersion === 4 ? Math.min(5, legacyStep + 1) : legacyStep === 2 ? 4 : legacyStep === 3 ? 5 : 2;
   const people = (value.people || []).map((person, index) => ({ ...person, color: ["#86efac", "#65d69a"].includes(person.color.toLowerCase()) ? COLORS[index % COLORS.length] : person.color }));
   const expenses = (value.expenses || []).map((item) => ({ ...item, splitEqually: false, quantities: Object.fromEntries(item.consumers.map((id) => [id, Math.max(1, item.quantities?.[id] || 1)])) }));
-  return { ...initialDraft, ...value, people, expenses, discountEnabled: value.discountEnabled ?? Boolean(value.discountCents), flowVersion: 5, step } as Draft;
+  return { ...initialDraft, ...value, people, expenses, taxMode: value.taxMode || "percent", taxAmountCents: value.taxAmountCents || 0, discountEnabled: value.discountEnabled ?? Boolean(value.discountCents), flowVersion: 5, step } as Draft;
 };
 const emptyRestaurantForm: RestaurantForm = { name: "", locationName: "", address: "", city: "", region: "", postalCode: "", phone: "" };
 
@@ -90,10 +90,10 @@ function savedDraftTotal(value?: Draft) {
   if (shared) {
     owners.forEach((owner) => {
       const raw = draft.expenses.filter((item) => (item.addedBy || "organizer") === owner).reduce((sum, item) => sum + item.cents, 0);
-      const adjustment = draft.participantAdjustments[owner] || { taxEnabled: false, taxRate: 0, tipEnabled: false, tipMode: "percent" as const, tipValue: 0, discountCents: 0, discountTiming: "before" as const };
+      const adjustment = draft.participantAdjustments[owner] || { taxEnabled: false, taxMode: "percent" as const, taxRate: 0, taxAmountCents: 0, tipEnabled: false, tipMode: "percent" as const, tipValue: 0, discountCents: 0, discountTiming: "before" as const };
       const discount = Math.min(adjustment.discountCents, raw);
       const base = adjustment.discountTiming === "before" ? raw - discount : raw;
-      const tax = adjustment.taxEnabled ? Math.round(base * adjustment.taxRate / 100) : 0;
+      const tax = !adjustment.taxEnabled ? 0 : adjustment.taxMode === "amount" ? adjustment.taxAmountCents : Math.round(base * adjustment.taxRate / 100);
       const tip = !adjustment.tipEnabled ? 0 : adjustment.tipMode === "amount" ? adjustment.tipValue : Math.round(base * adjustment.tipValue / 100);
       calculated += Math.max(0, base + tax + tip - (adjustment.discountTiming === "after" ? discount : 0));
     });
@@ -101,7 +101,7 @@ function savedDraftTotal(value?: Draft) {
     const subtotal = draft.expenses.reduce((sum, item) => sum + item.cents, 0);
     const discount = draft.discountEnabled ? Math.min(draft.discountCents, subtotal) : 0;
     const base = draft.discountTiming === "before" ? subtotal - discount : subtotal;
-    const tax = draft.taxEnabled ? Math.round(base * draft.taxRate / 100) : 0;
+    const tax = !draft.taxEnabled ? 0 : draft.taxMode === "amount" ? draft.taxAmountCents : Math.round(base * draft.taxRate / 100);
     const tip = !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? draft.tipValue : Math.round(base * draft.tipValue / 100);
     calculated = Math.max(0, base + tax + tip - (draft.discountTiming === "after" ? discount : 0));
   }
@@ -196,10 +196,6 @@ export default function Home() {
   const [editingGroup, setEditingGroup] = useState<SavedGroup | null>(null);
   const [groupBusy, setGroupBusy] = useState(false);
   const [expenseTotalOpen, setExpenseTotalOpen] = useState(false);
-  const [taxZip, setTaxZip] = useState("");
-  const [taxLookupBusy, setTaxLookupBusy] = useState(false);
-  const [taxLookupResult, setTaxLookupResult] = useState<{ rate: number; label: string } | null>(null);
-  const [taxLookupError, setTaxLookupError] = useState("");
   const [currentPhones, setCurrentPhones] = useState<Record<string, string>>({});
   const [cloudShareToken, setCloudShareToken] = useState("");
   const [organizerShareToken, setOrganizerShareToken] = useState("");
@@ -431,7 +427,7 @@ export default function Home() {
     saveTimer.current = setTimeout(async () => {
       const savedGuest = JSON.parse(localStorage.getItem(`bill-guest-${cloudShareToken}`) || "{}") as { edit_token?: string };
       if (!savedGuest.edit_token) { guestSavePending.current = false; setCloudError("Your participant access has expired."); setSaveStatus("offline"); return; }
-      const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
+      const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxMode: draft.taxMode, taxRate: draft.taxRate, taxAmountCents: draft.taxAmountCents, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
       const participantDraft = { ...draft, participantAdjustments: { ...draft.participantAdjustments, [guestParticipantId]: adjustment } };
       const { data, error: guestError } = await supabase!.rpc("save_participant_draft", { p_token: cloudShareToken, p_participant_id: guestParticipantId, p_edit_token: savedGuest.edit_token, p_draft: participantDraft });
       if (saveVersion !== guestSaveVersion.current) return;
@@ -493,11 +489,11 @@ export default function Home() {
   const resultsShareToken = organizerShareToken || cloudShareToken || (shareLink ? new URL(shareLink).searchParams.get("share") || "" : "");
   useEffect(() => {
     if (!sharedMode || guestParticipantId) return;
-    const organizerAdjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
+    const organizerAdjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxMode: draft.taxMode, taxRate: draft.taxRate, taxAmountCents: draft.taxAmountCents, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
     const savedAdjustment = draft.participantAdjustments.organizer;
     if (JSON.stringify(savedAdjustment) === JSON.stringify(organizerAdjustment)) return;
     setDraft((current) => ({ ...current, participantAdjustments: { ...current.participantAdjustments, organizer: organizerAdjustment } }));
-  }, [sharedMode, guestParticipantId, draft.taxEnabled, draft.taxRate, draft.tipEnabled, draft.tipMode, draft.tipValue, draft.discountEnabled, draft.discountCents, draft.discountTiming, draft.participantAdjustments]);
+  }, [sharedMode, guestParticipantId, draft.taxEnabled, draft.taxMode, draft.taxRate, draft.taxAmountCents, draft.tipEnabled, draft.tipMode, draft.tipValue, draft.discountEnabled, draft.discountCents, draft.discountTiming, draft.participantAdjustments]);
   useEffect(() => {
     if (!resultsShareToken) { setResultsQrCode(""); return; }
     const resultsLink = `${window.location.origin}/?share=${resultsShareToken}&results=1`;
@@ -510,11 +506,11 @@ export default function Home() {
       const items = draft.expenses.filter((item) => (item.addedBy || "organizer") === owner);
       const raw = items.reduce((sum, item) => sum + item.cents, 0);
       if (!raw) return;
-      const live = owner === guestParticipantId || (owner === "organizer" && !guestParticipantId) ? { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming } : null;
-      const a = live || draft.participantAdjustments[owner] || { taxEnabled: false, taxRate: 0, tipEnabled: false, tipMode: "percent" as const, tipValue: 0, discountCents: 0, discountTiming: "before" as const };
+      const live = owner === guestParticipantId || (owner === "organizer" && !guestParticipantId) ? { taxEnabled: draft.taxEnabled, taxMode: draft.taxMode, taxRate: draft.taxRate, taxAmountCents: draft.taxAmountCents, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming } : null;
+      const a = live || draft.participantAdjustments[owner] || { taxEnabled: false, taxMode: "percent" as const, taxRate: 0, taxAmountCents: 0, tipEnabled: false, tipMode: "percent" as const, tipValue: 0, discountCents: 0, discountTiming: "before" as const };
       const discount = Math.min(a.discountCents, raw);
       const base = a.discountTiming === "before" ? raw - discount : raw;
-      const tax = a.taxEnabled ? Math.round(base * a.taxRate / 100) : 0;
+      const tax = !a.taxEnabled ? 0 : a.taxMode === "amount" ? a.taxAmountCents : Math.round(base * a.taxRate / 100);
       const tip = !a.tipEnabled ? 0 : a.tipMode === "amount" ? a.tipValue : Math.round(base * a.tipValue / 100);
       const finalTotal = Math.max(0, base + tax + tip - (a.discountTiming === "after" ? discount : 0));
       items.forEach((item) => { result[item.id] = Math.floor(finalTotal * item.cents / raw); });
@@ -534,7 +530,7 @@ export default function Home() {
   const totals = useMemo(() => {
     const discount = sharedMode || !draft.discountEnabled ? 0 : Math.min(draft.discountCents, subtotal);
     const taxableBase = draft.discountTiming === "before" ? subtotal - discount : subtotal;
-    const tax = sharedMode ? 0 : draft.taxEnabled ? Math.round(taxableBase * draft.taxRate / 100) : 0;
+    const tax = sharedMode ? 0 : !draft.taxEnabled ? 0 : draft.taxMode === "amount" ? draft.taxAmountCents : Math.round(taxableBase * draft.taxRate / 100);
     const tip = sharedMode ? 0 : !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? Math.round(draft.tipValue) : Math.round(taxableBase * draft.tipValue / 100);
     const calculatedGrand = sharedMode ? Object.values(finalItemCents).reduce((sum, cents) => sum + cents, 0) : Math.max(0, taxableBase + tax + tip - (draft.discountTiming === "after" ? discount : 0));
     const grand = Math.max(calculatedGrand, draft.totalOverrideCents || 0);
@@ -628,7 +624,7 @@ export default function Home() {
   const ownReceiptSubtotal = draft.expenses.filter((item) => !sharedMode || (item.addedBy || "organizer") === currentReceiptOwner).reduce((sum, item) => sum + item.cents, 0);
   const ownReceiptDiscount = draft.discountEnabled ? Math.min(draft.discountCents, ownReceiptSubtotal) : 0;
   const ownReceiptBase = draft.discountTiming === "before" ? ownReceiptSubtotal - ownReceiptDiscount : ownReceiptSubtotal;
-  const ownReceiptTax = draft.taxEnabled ? Math.round(ownReceiptBase * draft.taxRate / 100) : 0;
+  const ownReceiptTax = !draft.taxEnabled ? 0 : draft.taxMode === "amount" ? draft.taxAmountCents : Math.round(ownReceiptBase * draft.taxRate / 100);
   const ownReceiptTip = !draft.tipEnabled ? 0 : draft.tipMode === "amount" ? draft.tipValue : Math.round(ownReceiptBase * draft.tipValue / 100);
 
   function addSavedContact(contact: SavedContact) {
@@ -745,7 +741,7 @@ export default function Home() {
       if (cloudShareToken && guestParticipantId) {
         const savedGuest = JSON.parse(localStorage.getItem(`bill-guest-${cloudShareToken}`) || "{}") as { edit_token?: string };
         if (!savedGuest.edit_token) throw new Error("Your participant access has expired. Choose your name again before sharing.");
-        const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxRate: draft.taxRate, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
+        const adjustment: ParticipantAdjustment = { taxEnabled: draft.taxEnabled, taxMode: draft.taxMode, taxRate: draft.taxRate, taxAmountCents: draft.taxAmountCents, tipEnabled: draft.tipEnabled, tipMode: draft.tipMode, tipValue: draft.tipValue, discountCents: draft.discountEnabled ? draft.discountCents : 0, discountTiming: draft.discountTiming };
         const participantDraft = { ...draft, participantAdjustments: { ...draft.participantAdjustments, [guestParticipantId]: adjustment } };
         const { error: saveError } = await supabase.rpc("save_participant_draft", { p_token: cloudShareToken, p_participant_id: guestParticipantId, p_edit_token: savedGuest.edit_token, p_draft: participantDraft });
         if (saveError) throw new Error(saveError.message);
@@ -944,10 +940,11 @@ export default function Home() {
       const image = await receiptImageDataUrl(file);
       setScanProgress(25);
       const response = await fetch("/api/scan-receipt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image }) });
-      const data = await response.json() as { items?: { name: string; cents: number }[]; error?: string };
+      const data = await response.json() as { items?: { name: string; cents: number }[]; taxCents?: number; error?: string };
       if (!response.ok) throw new Error(data.error || "The AI receipt reader could not process this photo.");
       const parsed = (data.items || []).map((item) => ({ name: item.name.trim(), cents: Math.round(item.cents), selected: true })).filter((item) => item.name && item.cents > 0);
       if (!parsed.length) throw new Error("No purchased item lines were found in this receipt.");
+      if (data.taxCents && data.taxCents > 0) setDraft((current) => ({ ...current, taxEnabled: true, taxMode: "amount", taxAmountCents: Math.round(data.taxCents || 0) }));
       setScanProgress(100); setScanLines(parsed); setScanBusy(false); return;
     } catch (cause) {
       aiError = cause instanceof Error ? cause.message : "The AI receipt reader could not process this photo.";
@@ -960,19 +957,6 @@ export default function Home() {
     } catch {
       setError(`${aiError} Try a clear, straight photo with the full receipt visible, or enter the items manually.`);
     } finally { setScanBusy(false); }
-  }
-  async function findTaxRate() {
-    setTaxLookupBusy(true); setTaxLookupError(""); setTaxLookupResult(null);
-    try {
-      const response = await fetch("/api/tax-rate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zip: taxZip }) });
-      const data = await response.json() as { rate?: number; location?: { zip?: string }; error?: string };
-      if (!response.ok || typeof data.rate !== "number") throw new Error(data.error || "The estimated tax rate could not be found.");
-      const location = data.location || {};
-      const label = location.zip || taxZip;
-      setTaxLookupResult({ rate: data.rate, label: label || taxZip });
-    } catch (cause) {
-      setTaxLookupError(cause instanceof Error ? cause.message : "The estimated tax rate could not be found.");
-    } finally { setTaxLookupBusy(false); }
   }
   function addScannedItems() {
     const items = scanLines.filter((line) => line.selected && line.cents > 0).map((line) => ({ id: uid(), name: line.name, cents: line.cents, consumers: [], addedBy: guestParticipantId || "organizer", addedByName: guestName || "Organizer", splitEqually: false, quantities: {} }));
@@ -1358,7 +1342,7 @@ export default function Home() {
         <div className="expense-entry simple-entry"><div className="expense-inputs"><input value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder="Item name (optional)" /><div className="money-input"><span>$</span><input inputMode="decimal" value={itemAmount} onChange={(e)=>setItemAmount(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addExpense()} placeholder="0.00" /></div></div><button className="wide-secondary" onClick={addExpense}>＋ Add item</button></div>
       </section>
       <section className="adjustment-cards control-stack" aria-label="Tax, tip and discount">
-        <div className="setting-card adjustment-card tax-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<><label className="adjustment-entry tax-rate-entry"><span>Percent</span><div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})} /><span>%</span></div></label><div className="tax-location-lookup"><span>Find estimated rate by ZIP code</span><div className="tax-location-fields"><input inputMode="numeric" maxLength={10} value={taxZip} onChange={(event)=>setTaxZip(event.target.value.replace(/[^\d-]/g,""))} onKeyDown={(event)=>event.key==="Enter"&&void findTaxRate()} placeholder="ZIP code" aria-label="ZIP code"/><button disabled={taxLookupBusy||!taxZip} onClick={()=>void findTaxRate()}>{taxLookupBusy?"Finding…":"Find"}</button></div>{taxLookupError&&<small className="tax-lookup-error">{taxLookupError}</small>}{taxLookupResult&&<div className="tax-lookup-result"><span><strong>{taxLookupResult.rate}%</strong><small>{taxLookupResult.label}</small></span><button onClick={()=>setDraft({...draft,taxEnabled:true,taxRate:taxLookupResult.rate})}>Use rate</button></div>}<small className="tax-estimate-note">Estimate for general sales tax. Restaurant-specific taxes may differ.</small></div></>}</div>
+        <div className="setting-card adjustment-card tax-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<><div className="tax-entry-line"><div className="segment"><button className={draft.taxMode==="percent"?"active":""} onClick={()=>setDraft({...draft,taxMode:"percent"})}>%</button><button className={draft.taxMode==="amount"?"active":""} onClick={()=>setDraft({...draft,taxMode:"amount"})}>$</button></div>{draft.taxMode==="percent"?<div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})} /><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.taxAmountCents/100} onValueChange={(value)=>setDraft({...draft,taxAmountCents:Math.round(value*100)})} placeholder="0.00" /></div>}</div><small className="tax-entry-note">Use the tax amount printed on the receipt, or enter the percentage if you know it. Scanning a receipt can fill the amount automatically.</small></>}</div>
         <div className="setting-card adjustment-card tip-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTip:totals.tip)}</strong>}</div>{draft.tipEnabled&&<><div className="tip-entry-line"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><DecimalInput value={draft.tipValue} onValueChange={(tipValue)=>setDraft({...draft,tipValue})} /><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.tipValue/100} onValueChange={(value)=>setDraft({...draft,tipValue:Math.round(value*100)})} placeholder="0.00" /></div>}</div><div className="tip-presets" aria-label="Quick tip percentages">{[10,15,18,20,25].map((percent)=><button key={percent} className={draft.tipMode==="percent"&&draft.tipValue===percent?"active":""} onClick={()=>setDraft({...draft,tipEnabled:true,tipMode:"percent",tipValue:percent})}>{percent}%</button>)}</div></>}</div>
         <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.discountEnabled?"on":""}`} onClick={()=>setDraft({...draft,discountEnabled:!draft.discountEnabled})} aria-label="Turn discount on or off"><i></i></button><strong>Discount</strong></div></div>{draft.discountEnabled&&<><div className="adjustment-entry discount-timing-entry"><span>Apply</span><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div></div><label className="adjustment-calculated adjustment-discount-entry"><span>Amount</span><div className="money-input"><span>$</span><DecimalInput value={draft.discountCents/100} onValueChange={(value)=>setDraft((current)=>({...current,discountCents:Math.round(value*100)}))} placeholder="0.00" /></div></label><small className="discount-explanation">{draft.discountTiming==="before"?"The discount lowers the subtotal before tax and tip are calculated.":"Tax and tip are calculated first, then the discount is subtracted."}</small></>}</div>
       </section>
@@ -1453,7 +1437,7 @@ export default function Home() {
       </section>
 
       <section className={`panel advanced results-adjustments ${advanced?"open":""}`}><button className="advanced-toggle" onClick={()=>setAdvanced(!advanced)}><span><b>+</b><span><strong>Advanced settings</strong></span></span><span className={`collapse-chevron ${advanced?"open":""}`}>⌄</span></button>{advanced && <div className="advanced-body control-stack">
-        <div className="setting-card"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})}><i></i></button><div><strong>Tax</strong></div>{draft.taxEnabled&&<label className="compact-value"><input type="number" min="0" step="0.01" value={draft.taxRate||""} onChange={(e)=>setDraft({...draft,taxRate:Number(e.target.value)||0})} placeholder="0" /><span>%</span></label>}</div>
+        <div className="setting-card tax-control"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})}><i></i></button><div><strong>Tax</strong></div>{draft.taxEnabled&&<><div className="segment"><button className={draft.taxMode==="percent"?"active":""} onClick={()=>setDraft({...draft,taxMode:"percent"})}>%</button><button className={draft.taxMode==="amount"?"active":""} onClick={()=>setDraft({...draft,taxMode:"amount"})}>$</button></div>{draft.taxMode==="percent"?<div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})}/><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.taxAmountCents/100} onValueChange={(value)=>setDraft({...draft,taxAmountCents:Math.round(value*100)})} placeholder="0.00"/></div>}</>}</div>
         <div className="setting-card tip-control"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})}><i></i></button><div><strong>Tip</strong></div>{draft.tipEnabled&&<><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent"})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount"})}>$</button></div><input className="tip-value" inputMode="decimal" defaultValue={draft.tipValue ? (draft.tipMode==="amount"?draft.tipValue/100:draft.tipValue) : ""} onChange={(e)=>setDraft({...draft,tipValue:draft.tipMode==="amount"?toCents(e.target.value):Number(e.target.value)||0})} placeholder="0" /></>}</div>
         <div className="setting-card discount-control"><div><strong>Discount</strong></div><div className="discount-tools"><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div><div className="money-input"><span>$</span><input inputMode="decimal" defaultValue={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></div></div>
       </div>}</section>

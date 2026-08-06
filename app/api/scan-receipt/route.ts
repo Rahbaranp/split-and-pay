@@ -6,7 +6,7 @@ const scanWindows = new Map<string, { count: number; resetAt: number }>();
 const ignoredLine = /^(sub\s*total|total|tax|tip|discount|change|cash|visa|mastercard|amex|balance|amount due|payment|credit|debit|fees?)(\b|\s|:)/i;
 
 type ExpenseField = { Type?: { Text?: string }; ValueDetection?: { Text?: string } };
-type TextractResult = { ExpenseDocuments?: { LineItemGroups?: { LineItems?: { LineItemExpenseFields?: ExpenseField[] }[] }[] }[] };
+type TextractResult = { ExpenseDocuments?: { SummaryFields?: ExpenseField[]; LineItemGroups?: { LineItems?: { LineItemExpenseFields?: ExpenseField[] }[] }[] }[] };
 
 const encoder = new TextEncoder();
 const hex = (value: ArrayBuffer) => [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
   try {
     const result = await analyzeExpense(match[2]);
 
-    const items = (result.ExpenseDocuments || []).flatMap((document) =>
+    const documents = result.ExpenseDocuments || [];
+    const items = documents.flatMap((document) =>
       (document.LineItemGroups || []).flatMap((group) =>
         (group.LineItems || []).flatMap((line) => {
           const fields = line.LineItemExpenseFields || [];
@@ -103,7 +104,8 @@ export async function POST(request: NextRequest) {
       )
     ).slice(0, 200);
 
-    return Response.json({ items });
+    const taxCents = documents.reduce((sum, document) => sum + moneyToCents(fieldText(document.SummaryFields || [], "TAX")), 0);
+    return Response.json({ items, taxCents });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "The receipt reader could not process this photo.";
     return Response.json({ error: message }, { status: 502 });
