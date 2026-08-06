@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.30";
+const APP_VERSION = "0.1.31";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -113,6 +113,10 @@ function billFingerprint(bill: CloudBill) {
   if (!draft) return bill.id;
   const { cloudId: _cloudId, theme: _theme, step: _step, ...content } = draft;
   return JSON.stringify({ title: bill.title || "", occurred_at: bill.occurred_at, content });
+}
+
+function isFutureJwtError(message?: string) {
+  return Boolean(message && /jwt issued at future/i.test(message));
 }
 
 function DecimalInput({ value, onValueChange, placeholder = "0", className }: { value: number; onValueChange: (value: number) => void; placeholder?: string; className?: string }) {
@@ -313,7 +317,16 @@ export default function Home() {
   }, [draft, cloudReady, userId]);
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => { setUserEmail(data.user?.email || ""); setUserId(data.user?.id || ""); });
+    const authClient = supabase;
+    authClient.auth.getUser().then(async ({ data, error: authError }) => {
+      if (isFutureJwtError(authError?.message)) {
+        await authClient.auth.signOut({ scope: "local" });
+        setUserEmail(""); setUserId(""); setCloudError(""); setSaveStatus("local");
+        setNotice("Your saved bill is safe on this device. Please log in again to reconnect your account.");
+        return;
+      }
+      setUserEmail(data.user?.email || ""); setUserId(data.user?.id || "");
+    });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => { setUserEmail(session?.user.email || ""); setUserId(session?.user.id || ""); });
     return () => data.subscription.unsubscribe();
   }, []);
