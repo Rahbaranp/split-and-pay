@@ -231,16 +231,13 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .segment button { border: 0; border-radius: 8px; padding: 7px 10px; background: transparent; color: var(--muted); } .segment button.active { background: var(--accent); color: #073b25; font-weight: 900; }
 .tip-value { width: 88px; margin: 0; } .discount-control { justify-content: space-between; } .discount-control > div:first-child { display: flex; flex-direction: column; flex: 1; } .discount-control .money-input { width: 145px; }
 .payment-summary { margin-top: 15px; border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 8px; } .payment-summary span { display: flex; justify-content: space-between; color: var(--muted); } .payment-summary b { color: var(--text); }
-.editable-total .total-input { width: min(100%,260px); margin: 7px 0; } .editable-total .total-input input { font-size: 40px; font-weight: 900; padding: 4px 8px; }
-.editable-total > button { width: fit-content; border: 0; background: transparent; color: var(--accent); padding: 3px 0 8px; }
+.different-total-box { display: grid; gap: 10px; margin: 13px 0 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.different-total-box > span { color: var(--text); font-weight: 800; }
+.different-total-box .money-input { width: 100%; margin: 0; }
 .merchant-balance { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); margin-top: 17px; padding: 14px; border-radius: 13px; } .merchant-balance span { color: var(--muted); } .merchant-balance strong { color: var(--accent); font-size: 20px; }
 .person-result strong.credit { color: var(--accent); }
 .discount-tools { display: flex; align-items: center; gap: 8px; } .discount-tools .money-input { width: 135px; }
 .payer-list { display: grid; gap: 10px; } .payer-box { border: 1px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 8px 12px; } .no-repayment { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding: 9px 0 2px; color: var(--muted); font-size: 13px; }
-.total-display { display: flex; align-items: center; gap: 10px; font-size: 44px; font-weight: 900; color: var(--text) !important; } .total-display small { font-size: 12px; color: var(--accent); border: 1px solid var(--accent); padding: 5px 8px; border-radius: 8px; }
-.total-editor { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: center; gap: 9px; width: 100%; } .total-editor > button { min-height: 48px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 10px; padding: 9px 12px; font-weight: 800; }
-.total-editor .total-input { grid-column: 1 / -1; width: 100%; }
-.total-editor > button.apply-total { border-color: var(--accent); background: var(--accent); color: #073044; }
 .balance-breakdown { display: flex; width: 132px; min-height: 48px; flex-direction: column; justify-content: center; align-items: flex-end; gap: 2px; text-align: right; } .balance-breakdown small { color: var(--muted); } .balance-breakdown > strong { display: block; min-width: 100%; text-align: right; }
 .settle-card { margin-top: 14px; } .settle-list { display: grid; gap: 8px; } .settle-list .settlement { margin: 0; }
 .settlement-person-buttons { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
@@ -379,8 +376,6 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .unified-confirm.destructive .confirm-symbol { background: color-mix(in srgb,#e17878 18%,var(--surface-2)); color: #ffaaaa; }
 .confirm-actions button:disabled { opacity: .55; cursor: not-allowed; }
 .guest-mode .results-adjustments { display: none; }
-.guest-mode .total-display { pointer-events: none; }
-.guest-mode .total-display small,.guest-mode .editable-total > button { display: none; }
 .guest-mode .assignment-options button:disabled { opacity: .55; cursor: not-allowed; }
 .guest-mode .assignment-person.read-only > button:disabled { border-color: var(--line); color: var(--muted); box-shadow: none; opacity: .72; }
 .guest-mode .assignment-person.read-only > button.selected:disabled { border-color: var(--muted); color: var(--muted); box-shadow: none; opacity: .82; }

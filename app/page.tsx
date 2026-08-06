@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.18";
+const APP_VERSION = "0.1.19";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -129,8 +129,6 @@ export default function Home() {
   const [advanced, setAdvanced] = useState(false);
   const [preferencePersonId, setPreferencePersonId] = useState("");
   const [itemsPersonId, setItemsPersonId] = useState("");
-  const [editingTotal, setEditingTotal] = useState(false);
-  const [totalText, setTotalText] = useState("");
   const [sharing, setSharing] = useState(false);
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [shareLink, setShareLink] = useState("");
@@ -931,8 +929,12 @@ export default function Home() {
     const nextBillId=crypto.randomUUID(); billIdentityRef.current=nextBillId;
     setDraft({ ...initialDraft, cloudId: nextBillId, theme: draft.theme, dateTime: localNow(), taxRate: draft.taxRate, tipMode: draft.tipMode, tipValue: draft.tipValue });
   }
-  function beginTotalEdit() { setTotalText(""); setError(""); setEditingTotal(true); }
-  function applyTotalEdit() { if (!totalText.trim()) { setError("Enter a new final total."); return; } const cents = toCents(totalText); if (cents < totals.calculatedGrand) { setError(`Final total cannot be less than ${money(totals.calculatedGrand)}.`); return; } setDraft({ ...draft, totalOverrideCents: cents === totals.calculatedGrand ? 0 : cents }); setError(""); setEditingTotal(false); }
+  function applyDifferentTotal(value: string) {
+    if (!value.trim()) { setDraft((current) => ({ ...current, totalOverrideCents: 0 })); setError(""); return true; }
+    const cents = toCents(value);
+    if (cents < totals.calculatedGrand) { setError(`Enter ${money(totals.calculatedGrand)} or more.`); return false; }
+    setDraft((current) => ({ ...current, totalOverrideCents: cents === totals.calculatedGrand ? 0 : cents })); setError(""); return true;
+  }
   async function createShareLink() {
     setSharing(true); setError("");
     try {
@@ -1320,7 +1322,7 @@ export default function Home() {
       <section className="page-title result-title"><span className="eyebrow">STEP 5 OF 5</span><h1>{savedTitle}</h1><p>{displayDate(draft.dateTime)} · {draft.people.length} people · {draft.expenses.length} items</p></section>
       {unassigned>0&&<section className="panel unassigned-results-warning"><div className="warning-symbol">!</div><h2>One or more items have not been selected by anyone.</h2><p>Assign every item before viewing the final amounts.</p><button onClick={()=>goTo(4)}>Go back and assign items</button></section>}
       <section className={`panel result-overview ${unassigned>0?"results-hidden":""}`}>
-        <div className="grand-total editable-total"><span>Final bill total</span>{editingTotal?<div className="total-editor"><div className="money-input total-input"><span>$</span><input autoFocus inputMode="decimal" value={totalText} placeholder={((draft.totalOverrideCents || totals.calculatedGrand) / 100).toFixed(2)} onChange={(e)=>setTotalText(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&applyTotalEdit()} /></div><button onClick={()=>setEditingTotal(false)}>Cancel</button><button className="apply-total" onClick={applyTotalEdit}>Apply</button></div>:<button className="total-display" onClick={beginTotalEdit}>{money(totals.grand)} <small>Edit</small></button>}{draft.totalOverrideCents>totals.calculatedGrand&&<button onClick={()=>setDraft({...draft,totalOverrideCents:0})}>Reset to {money(totals.calculatedGrand)}</button>}<small>{money(subtotal)} subtotal · {money(totals.tax)} tax · {money(totals.tip)} tip{totals.discount?` · −${money(totals.discount)} discount ${draft.discountTiming}`:""}</small></div>
+        <div className="grand-total"><span>Final bill total</span><strong>{money(totals.grand)}</strong>{!guestParticipantId&&<label className="different-total-box"><span>Want to pay a different total?</span><div className="money-input"><span>$</span><input key={`${totals.calculatedGrand}-${draft.totalOverrideCents}`} inputMode="decimal" defaultValue={draft.totalOverrideCents ? (draft.totalOverrideCents / 100).toFixed(2) : ""} placeholder="Enter amount" aria-label="Different total amount" onBlur={(event)=>{if(!applyDifferentTotal(event.currentTarget.value)) event.currentTarget.value=draft.totalOverrideCents?(draft.totalOverrideCents/100).toFixed(2):"";}} onKeyDown={(event)=>{if(event.key==="Enter") event.currentTarget.blur();}} /></div></label>}<small>{money(subtotal)} subtotal · {money(totals.tax)} tax · {money(totals.tip)} tip{totals.discount?` · −${money(totals.discount)} discount ${draft.discountTiming}`:""}</small></div>
         {draft.restaurant&&<div className="result-restaurant"><span>Paying restaurant</span><strong>{draft.restaurant.name}{draft.restaurant.locationName?` — ${draft.restaurant.locationName}`:""}</strong><small>{draft.restaurant.address}, {draft.restaurant.city}, {draft.restaurant.region}</small></div>}
         <div className="result-summary">
           <div><span>Total paid</span><strong>{money(totals.paidTotal)}</strong></div>
