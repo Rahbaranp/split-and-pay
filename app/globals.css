@@ -95,6 +95,10 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in sr
 .collapse-chevron { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); font-size: 27px; line-height: 1; transition: transform .22s ease, color .18s; transform-origin: center; }
 .collapse-chevron.open { transform: rotate(180deg); color: var(--text); } .advanced-toggle:hover .collapse-chevron { color: var(--accent); }
 .advanced-body { border-top: 1px solid var(--line); padding: 20px; }
+.advanced.open { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+.advanced.open .advanced-toggle { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 12px 40px rgba(0,0,0,.09); }
+.advanced.open .advanced-body { padding: 0; border-top: 0; }
+.advanced.open .setting-card { box-shadow: 0 12px 40px rgba(0,0,0,.09); }
 .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .advanced-body h3 { margin: 24px 0 8px; }
 .payment-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 15px; }
