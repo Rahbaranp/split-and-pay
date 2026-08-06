@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.27";
+const APP_VERSION = "0.1.28";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -113,6 +113,33 @@ function billFingerprint(bill: CloudBill) {
   if (!draft) return bill.id;
   const { cloudId: _cloudId, theme: _theme, step: _step, ...content } = draft;
   return JSON.stringify({ title: bill.title || "", occurred_at: bill.occurred_at, content });
+}
+
+function DecimalInput({ value, onValueChange, placeholder = "0", className }: { value: number; onValueChange: (value: number) => void; placeholder?: string; className?: string }) {
+  const [text, setText] = useState(value ? String(value) : "");
+  const focused = useRef(false);
+
+  useEffect(() => {
+    if (!focused.current) setText(value ? String(value) : "");
+  }, [value]);
+
+  return <input
+    className={className}
+    inputMode="decimal"
+    value={text}
+    placeholder={placeholder}
+    onFocus={() => { focused.current = true; }}
+    onChange={(event) => {
+      const next = event.target.value;
+      if (!/^\d*(?:\.\d{0,2})?$/.test(next)) return;
+      setText(next);
+      onValueChange(next === "" ? 0 : Number(next));
+    }}
+    onBlur={() => {
+      focused.current = false;
+      setText(value ? String(value) : "");
+    }}
+  />;
 }
 
 export default function Home() {
@@ -1299,8 +1326,8 @@ export default function Home() {
         <div className="expense-entry simple-entry"><div className="expense-inputs"><input value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder="Item name (optional)" /><div className="money-input"><span>$</span><input inputMode="decimal" value={itemAmount} onChange={(e)=>setItemAmount(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addExpense()} placeholder="0.00" /></div></div><button className="wide-secondary" onClick={addExpense}>＋ Add item</button></div>
       </section>
       <section className="adjustment-cards control-stack" aria-label="Tax, tip and discount">
-        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<label className="adjustment-entry tax-rate-entry"><span>Percent</span><div className="compact-value"><input inputMode="decimal" value={draft.taxRate||""} onChange={(e)=>setDraft({...draft,taxRate:Number(e.target.value)||0})} placeholder="0" /><span>%</span></div></label>}</div>
-        <div className="setting-card adjustment-card tip-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTip:totals.tip)}</strong>}</div>{draft.tipEnabled&&<><div className="tip-entry-line"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><input inputMode="decimal" value={draft.tipValue||""} onChange={(e)=>setDraft({...draft,tipValue:Number(e.target.value)||0})} placeholder="0" /><span>%</span></div>:<div className="money-input"><span>$</span><input inputMode="decimal" value={draft.tipValue?draft.tipValue/100:""} onChange={(e)=>setDraft({...draft,tipValue:toCents(e.target.value)})} placeholder="0.00" /></div>}</div><div className="tip-presets" aria-label="Quick tip percentages">{[10,15,18,20,25].map((percent)=><button key={percent} className={draft.tipMode==="percent"&&draft.tipValue===percent?"active":""} onClick={()=>setDraft({...draft,tipEnabled:true,tipMode:"percent",tipValue:percent})}>{percent}%</button>)}</div></>}</div>
+        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<label className="adjustment-entry tax-rate-entry"><span>Percent</span><div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})} /><span>%</span></div></label>}</div>
+        <div className="setting-card adjustment-card tip-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTip:totals.tip)}</strong>}</div>{draft.tipEnabled&&<><div className="tip-entry-line"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><DecimalInput value={draft.tipValue} onValueChange={(tipValue)=>setDraft({...draft,tipValue})} /><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.tipValue/100} onValueChange={(value)=>setDraft({...draft,tipValue:Math.round(value*100)})} placeholder="0.00" /></div>}</div><div className="tip-presets" aria-label="Quick tip percentages">{[10,15,18,20,25].map((percent)=><button key={percent} className={draft.tipMode==="percent"&&draft.tipValue===percent?"active":""} onClick={()=>setDraft({...draft,tipEnabled:true,tipMode:"percent",tipValue:percent})}>{percent}%</button>)}</div></>}</div>
         <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.discountEnabled?"on":""}`} onClick={()=>setDraft({...draft,discountEnabled:!draft.discountEnabled})} aria-label="Turn discount on or off"><i></i></button><strong>Discount</strong></div></div>{draft.discountEnabled&&<><div className="adjustment-entry"><span>Apply</span><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div></div><label className="adjustment-calculated adjustment-discount-entry"><span>Amount</span><div className="money-input"><span>$</span><input inputMode="decimal" value={draft.discountCents?draft.discountCents/100:""} onChange={(e)=>setDraft({...draft,discountCents:toCents(e.target.value)})} placeholder="0.00" /></div></label></>}</div>
       </section>
       <div className="page-actions">{!guestParticipantId&&<button className="back-button" onClick={()=>goTo(2)}><span className="nav-arrow">‹</span> Back</button>}<button className="calculate" disabled={!draft.expenses.length} onClick={()=>goTo(4)}>Next: Assign items <span className="nav-arrow">›</span></button></div>
