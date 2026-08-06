@@ -245,7 +245,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .tax-adjustment-card .tax-rate-entry { grid-column: 1 / -1; max-width: 210px; }
 .tax-location-lookup { grid-column: 1 / -1; display: grid !important; gap: 8px !important; }
 .tax-location-lookup > span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-.tax-location-fields { display: grid; grid-template-columns: minmax(105px,.7fr) minmax(130px,1fr) auto; gap: 8px; }
+.tax-location-fields { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
 .tax-location-fields input { min-width: 0; margin: 0; }
 .tax-location-fields button,.tax-lookup-result button { min-height: 46px; padding: 0 14px; border: 1px solid var(--accent); border-radius: 13px; background: var(--accent); color: #073044; font-weight: 900; }
 .tax-location-fields button:disabled { opacity: .5; cursor: not-allowed; }
@@ -451,8 +451,6 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .topbar > .theme-button { width: 38px; height: 58px; }
   .progress.five-steps button { font-size: 9px; padding-inline: 2px; }
   .account-button { padding: 8px; font-size: 12px; }
-  .tax-location-fields { grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); }
-  .tax-location-fields button { grid-column: 1 / -1; }
 }
 .history-backdrop { align-items: center; padding: 24px; }
 .history-panel { width: min(900px, 100%); max-height: 88vh; overflow: auto; padding: 28px; }
