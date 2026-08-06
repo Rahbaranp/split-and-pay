@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.33";
+const APP_VERSION = "0.1.34";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -1313,7 +1313,7 @@ export default function Home() {
         <div className="participant-control-row"><button className="section-heading groups-trigger" onClick={() => { if (guestParticipantId) return; if (!userId) setAccountOpen(true); else { setEditingGroup(null); setGroupsOpen(true); } }} disabled={Boolean(guestParticipantId)}><strong>Who’s splitting?</strong><span className="collapse-chevron" aria-hidden="true">⌄</span></button><strong className="group-people-count">{draft.people.length} people</strong></div>
         {!guestParticipantId && <div className="add-row"><div className="contact-entry"><input value={personName} onChange={(e) => setPersonName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPerson()} placeholder="Enter a name" autoComplete="off" />{contactSuggestions.length > 0 && <div className="contact-suggestions">{contactSuggestions.map((contact) => <button key={contact.id} onClick={() => addSavedContact(contact)}><span>{contact.name[0].toUpperCase()}</span><strong>{contact.name}</strong>{contact.phone && <small>{contact.phone}</small>}</button>)}</div>}</div><div className="add-action"><button className="add-button" onClick={addPerson}>Add</button></div></div>}
         {draft.people.length ? <div className="people-list">{draft.people.map((p) => <button className="person-chip" disabled={Boolean(guestParticipantId)} key={p.id} onClick={() => removePerson(p.id)}><span style={{background:p.color}}>{p.name[0].toUpperCase()}</span><em>{p.name}</em>{!guestParticipantId&&<b>×</b>}</button>)}</div> : null}
-        {!guestParticipantId&&<div className="group-footer"><p>{draft.people.length<2?"Add at least two people.":`${draft.people.length} people ready.`}</p><button className="group-save-compact" onClick={saveCurrentGroup}>Save group</button></div>}
+        {!guestParticipantId&&<div className="group-footer"><p>{draft.people.length<2?"Add at least two people.":`${draft.people.length} people ready.`}</p><button className="group-save-compact" onClick={saveCurrentGroup}>Save</button></div>}
       </section>
       <section className="panel section-panel page-one-expenses" aria-hidden="true">
         <div className="section-heading"><div><span className="step-number">2</span><h2>Add expenses</h2></div><span className="amount-badge">{money(subtotal)}</span></div>

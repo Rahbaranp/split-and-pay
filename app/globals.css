@@ -463,7 +463,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .history-preview-actions button { margin: 0; }
 @media (max-width: 600px) {
   .history-backdrop { padding: 0; align-items: stretch; }
-  .history-panel { max-height: 100vh; min-height: 100vh; border-radius: 0; padding: 22px 16px; }
+  .history-panel { width: 100%; height: 100dvh; min-height: 0; max-height: 100dvh; overflow-y: auto; scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom)); border-radius: 0; padding: 22px 16px calc(120px + env(safe-area-inset-bottom)); }
   .history-tools { grid-template-columns: 1fr; }
   .history-preview-summary { grid-template-columns: 1fr; }
   .history-preview-actions { grid-template-columns: 1fr; }
