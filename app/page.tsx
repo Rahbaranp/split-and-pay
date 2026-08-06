@@ -33,7 +33,6 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.48";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -1275,7 +1274,7 @@ export default function Home() {
   return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""} ${draft.step===3?"expenses-step":""}`}><div className="app-shell">
     <header className="topbar">
       <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img src="/bill-splitter-icon.png" alt="" /></button>
-      <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Scan, split & settle restaurant bills</span><small className="version-badge">Version {APP_VERSION}</small></div>
+      <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Scan, split & settle restaurant bills</span></div>
       <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
     </header>
     <nav className="progress five-steps" aria-label="Bill steps">{([[1,"Start"],[2,"Group"],[3,"Expenses"],[4,"Assign"],[5,"Results"]] as const).map(([n,label]) => <button key={n} className={`${draft.step === n ? "active" : ""} ${draft.step > n ? "done" : ""}`} onClick={() => n < draft.step && !guestParticipantId && goTo(n)}><b>{draft.step > n ? "✓" : n}</b><span>{label}</span></button>)}</nav>
