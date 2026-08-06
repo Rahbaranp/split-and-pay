@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.36";
+const APP_VERSION = "0.1.37";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -195,6 +195,7 @@ export default function Home() {
   const [groupsOpen, setGroupsOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<SavedGroup | null>(null);
   const [groupBusy, setGroupBusy] = useState(false);
+  const [expenseTotalOpen, setExpenseTotalOpen] = useState(false);
   const [currentPhones, setCurrentPhones] = useState<Record<string, string>>({});
   const [cloudShareToken, setCloudShareToken] = useState("");
   const [organizerShareToken, setOrganizerShareToken] = useState("");
@@ -1266,7 +1267,7 @@ export default function Home() {
   }
 
   if (!ready) return null;
-  return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""}`}><div className="app-shell">
+  return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""} ${draft.step===3?"expenses-step":""}`}><div className="app-shell">
     <header className="topbar">
       <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img src="/bill-splitter-icon.png" alt="" /></button>
       <div className="brand-copy"><strong>BILL SPLITTER</strong><span>Scan, split & settle restaurant bills</span><small className="version-badge">Version {APP_VERSION}</small></div>
@@ -1343,6 +1344,7 @@ export default function Home() {
         <div className="setting-card adjustment-card tip-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTip:totals.tip)}</strong>}</div>{draft.tipEnabled&&<><div className="tip-entry-line"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><DecimalInput value={draft.tipValue} onValueChange={(tipValue)=>setDraft({...draft,tipValue})} /><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.tipValue/100} onValueChange={(value)=>setDraft({...draft,tipValue:Math.round(value*100)})} placeholder="0.00" /></div>}</div><div className="tip-presets" aria-label="Quick tip percentages">{[10,15,18,20,25].map((percent)=><button key={percent} className={draft.tipMode==="percent"&&draft.tipValue===percent?"active":""} onClick={()=>setDraft({...draft,tipEnabled:true,tipMode:"percent",tipValue:percent})}>{percent}%</button>)}</div></>}</div>
         <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.discountEnabled?"on":""}`} onClick={()=>setDraft({...draft,discountEnabled:!draft.discountEnabled})} aria-label="Turn discount on or off"><i></i></button><strong>Discount</strong></div></div>{draft.discountEnabled&&<><div className="adjustment-entry discount-timing-entry"><span>Apply</span><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div></div><label className="adjustment-calculated adjustment-discount-entry"><span>Amount</span><div className="money-input"><span>$</span><DecimalInput value={draft.discountCents/100} onValueChange={(value)=>setDraft((current)=>({...current,discountCents:Math.round(value*100)}))} placeholder="0.00" /></div></label><small className="discount-explanation">{draft.discountTiming==="before"?"The discount lowers the subtotal before tax and tip are calculated.":"Tax and tip are calculated first, then the discount is subtracted."}</small></>}</div>
       </section>
+      <aside className={`expense-total-dock ${expenseTotalOpen?"open":""}`} aria-label="Current bill total"><button className="expense-total-toggle" onClick={()=>setExpenseTotalOpen((open)=>!open)} aria-expanded={expenseTotalOpen}><span>Current total</span><strong>{money(totals.calculatedGrand)}</strong><i aria-hidden="true">{expenseTotalOpen?"⌄":"⌃"}</i></button>{expenseTotalOpen&&<div className="expense-total-breakdown"><span>Subtotal <strong>{money(subtotal)}</strong></span><span>Tax <strong>{money(totals.tax)}</strong></span><span>Tip <strong>{money(totals.tip)}</strong></span><span>Discount <strong>{totals.discount?`−${money(totals.discount)}`:money(0)}</strong></span></div>}</aside>
       <div className="page-actions">{!guestParticipantId&&<button className="back-button" onClick={()=>goTo(2)}><span className="nav-arrow">‹</span> Back</button>}<button className="calculate" disabled={!draft.expenses.length} onClick={()=>goTo(4)}>Next: Assign items <span className="nav-arrow">›</span></button></div>
     </>}
 
