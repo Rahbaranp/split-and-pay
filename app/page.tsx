@@ -32,7 +32,7 @@ type AppConfirm =
   | { type: "remove-duplicates"; ids: string[] };
 
 const COLORS = ["#ffb86b", "#7dd3fc", "#c4b5fd", "#f9a8d4", "#fde047", "#fb7185", "#93c5fd", "#fdba74"];
-const APP_VERSION = "0.1.37";
+const APP_VERSION = "0.1.38";
 const STORAGE_KEY = "bill-splitter-stage-two";
 const PREF_KEY = "bill-splitter-preferences";
 const SHARE_AFTER_SIGN_IN_KEY = "bill-splitter-share-after-sign-in";
@@ -196,6 +196,11 @@ export default function Home() {
   const [editingGroup, setEditingGroup] = useState<SavedGroup | null>(null);
   const [groupBusy, setGroupBusy] = useState(false);
   const [expenseTotalOpen, setExpenseTotalOpen] = useState(false);
+  const [taxZip, setTaxZip] = useState("");
+  const [taxCity, setTaxCity] = useState("");
+  const [taxLookupBusy, setTaxLookupBusy] = useState(false);
+  const [taxLookupResult, setTaxLookupResult] = useState<{ rate: number; label: string } | null>(null);
+  const [taxLookupError, setTaxLookupError] = useState("");
   const [currentPhones, setCurrentPhones] = useState<Record<string, string>>({});
   const [cloudShareToken, setCloudShareToken] = useState("");
   const [organizerShareToken, setOrganizerShareToken] = useState("");
@@ -956,7 +961,21 @@ export default function Home() {
     } catch {
       setError(`${aiError} Try a clear, straight photo with the full receipt visible, or enter the items manually.`);
     } finally { setScanBusy(false); }
-  }  function addScannedItems() {
+  }
+  async function findTaxRate() {
+    setTaxLookupBusy(true); setTaxLookupError(""); setTaxLookupResult(null);
+    try {
+      const response = await fetch("/api/tax-rate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zip: taxZip, city: taxCity }) });
+      const data = await response.json() as { rate?: number; location?: { zip?: string; city?: string; county?: string; state?: string }; error?: string };
+      if (!response.ok || typeof data.rate !== "number") throw new Error(data.error || "The estimated tax rate could not be found.");
+      const location = data.location || {};
+      const label = [location.city, location.state, location.zip].filter(Boolean).join(", ");
+      setTaxLookupResult({ rate: data.rate, label: label || taxZip });
+    } catch (cause) {
+      setTaxLookupError(cause instanceof Error ? cause.message : "The estimated tax rate could not be found.");
+    } finally { setTaxLookupBusy(false); }
+  }
+  function addScannedItems() {
     const items = scanLines.filter((line) => line.selected && line.cents > 0).map((line) => ({ id: uid(), name: line.name, cents: line.cents, consumers: [], addedBy: guestParticipantId || "organizer", addedByName: guestName || "Organizer", splitEqually: false, quantities: {} }));
     if (!items.length) { setError("Select at least one scanned item."); return; }
     setDraft((current) => ({ ...current, expenses: [...current.expenses, ...items] })); setScanLines([]); setError("");
@@ -1340,7 +1359,7 @@ export default function Home() {
         <div className="expense-entry simple-entry"><div className="expense-inputs"><input value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder="Item name (optional)" /><div className="money-input"><span>$</span><input inputMode="decimal" value={itemAmount} onChange={(e)=>setItemAmount(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&addExpense()} placeholder="0.00" /></div></div><button className="wide-secondary" onClick={addExpense}>＋ Add item</button></div>
       </section>
       <section className="adjustment-cards control-stack" aria-label="Tax, tip and discount">
-        <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<label className="adjustment-entry tax-rate-entry"><span>Percent</span><div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})} /><span>%</span></div></label>}</div>
+        <div className="setting-card adjustment-card tax-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.taxEnabled?"on":""}`} onClick={()=>setDraft({...draft,taxEnabled:!draft.taxEnabled})} aria-label="Turn tax on or off"><i></i></button><strong>Tax</strong></div>{draft.taxEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTax:totals.tax)}</strong>}</div>{draft.taxEnabled&&<><label className="adjustment-entry tax-rate-entry"><span>Percent</span><div className="compact-value"><DecimalInput value={draft.taxRate} onValueChange={(taxRate)=>setDraft({...draft,taxRate})} /><span>%</span></div></label><div className="tax-location-lookup"><span>Find estimated rate</span><div className="tax-location-fields"><input inputMode="numeric" maxLength={10} value={taxZip} onChange={(event)=>setTaxZip(event.target.value.replace(/[^\d-]/g,""))} onKeyDown={(event)=>event.key==="Enter"&&void findTaxRate()} placeholder="ZIP code" aria-label="ZIP code"/><input value={taxCity} onChange={(event)=>setTaxCity(event.target.value)} onKeyDown={(event)=>event.key==="Enter"&&void findTaxRate()} placeholder="City (optional)" aria-label="City, optional"/><button disabled={taxLookupBusy||!taxZip} onClick={()=>void findTaxRate()}>{taxLookupBusy?"Finding…":"Find"}</button></div>{taxLookupError&&<small className="tax-lookup-error">{taxLookupError}</small>}{taxLookupResult&&<div className="tax-lookup-result"><span><strong>{taxLookupResult.rate}%</strong><small>{taxLookupResult.label}</small></span><button onClick={()=>setDraft({...draft,taxEnabled:true,taxRate:taxLookupResult.rate})}>Use rate</button></div>}<small className="tax-estimate-note">Estimate for general sales tax. Restaurant-specific taxes may differ.</small></div></>}</div>
         <div className="setting-card adjustment-card tip-adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.tipEnabled?"on":""}`} onClick={()=>setDraft({...draft,tipEnabled:!draft.tipEnabled})} aria-label="Turn tip on or off"><i></i></button><strong>Tip</strong></div>{draft.tipEnabled&&<strong className="adjustment-head-amount">{money(sharedMode?ownReceiptTip:totals.tip)}</strong>}</div>{draft.tipEnabled&&<><div className="tip-entry-line"><div className="segment"><button className={draft.tipMode==="percent"?"active":""} onClick={()=>setDraft({...draft,tipMode:"percent",tipValue:0})}>%</button><button className={draft.tipMode==="amount"?"active":""} onClick={()=>setDraft({...draft,tipMode:"amount",tipValue:0})}>$</button></div>{draft.tipMode==="percent"?<div className="compact-value"><DecimalInput value={draft.tipValue} onValueChange={(tipValue)=>setDraft({...draft,tipValue})} /><span>%</span></div>:<div className="money-input"><span>$</span><DecimalInput value={draft.tipValue/100} onValueChange={(value)=>setDraft({...draft,tipValue:Math.round(value*100)})} placeholder="0.00" /></div>}</div><div className="tip-presets" aria-label="Quick tip percentages">{[10,15,18,20,25].map((percent)=><button key={percent} className={draft.tipMode==="percent"&&draft.tipValue===percent?"active":""} onClick={()=>setDraft({...draft,tipEnabled:true,tipMode:"percent",tipValue:percent})}>{percent}%</button>)}</div></>}</div>
         <div className="setting-card adjustment-card"><div className="adjustment-card-head"><div className="adjustment-card-title"><button className={`switch ${draft.discountEnabled?"on":""}`} onClick={()=>setDraft({...draft,discountEnabled:!draft.discountEnabled})} aria-label="Turn discount on or off"><i></i></button><strong>Discount</strong></div></div>{draft.discountEnabled&&<><div className="adjustment-entry discount-timing-entry"><span>Apply</span><div className="segment"><button className={draft.discountTiming==="before"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"before"})}>Before</button><button className={draft.discountTiming==="after"?"active":""} onClick={()=>setDraft({...draft,discountTiming:"after"})}>After</button></div></div><label className="adjustment-calculated adjustment-discount-entry"><span>Amount</span><div className="money-input"><span>$</span><DecimalInput value={draft.discountCents/100} onValueChange={(value)=>setDraft((current)=>({...current,discountCents:Math.round(value*100)}))} placeholder="0.00" /></div></label><small className="discount-explanation">{draft.discountTiming==="before"?"The discount lowers the subtotal before tax and tip are calculated.":"Tax and tip are calculated first, then the discount is subtracted."}</small></>}</div>
       </section>
