@@ -229,7 +229,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .tip-value { width: 88px; margin: 0; } .discount-control { justify-content: space-between; } .discount-control > div:first-child { display: flex; flex-direction: column; flex: 1; } .discount-control .money-input { width: 145px; }
 .payment-summary { margin-top: 15px; border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 8px; } .payment-summary span { display: flex; justify-content: space-between; color: var(--muted); } .payment-summary b { color: var(--text); }
 .different-total-box { display: grid; gap: 10px; margin: 13px 0 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
-.different-total-box > span { color: var(--text); font-size: 18px; font-weight: 900; }
+.different-total-box > span { color: var(--text); font-weight: 800; }
 .different-total-box .money-input { width: 100%; margin: 0; }
 .different-total-box .money-input > span,.different-total-box .money-input input { font-size: 28px; font-weight: 900; }
 .original-bill-total { transition: color .18s ease; }
