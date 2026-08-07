@@ -1410,7 +1410,7 @@ export default function Home() {
           const net=outgoingTotal-incomingTotal;
           const selectedItems=draft.expenses.filter((item)=>item.consumers.includes(person.id)).length;
           return <article className="panel person-payment-card" style={{borderColor:person.color,boxShadow:`0 0 0 1px color-mix(in srgb, ${person.color} 80%, transparent), 0 14px 46px color-mix(in srgb, ${person.color} 55%, transparent), inset 0 0 24px color-mix(in srgb, ${person.color} 12%, transparent)`}} key={person.id}>
-            <header><span><i style={{background:person.color}}>{person.name[0].toUpperCase()}</i><strong>{person.name}</strong><button className="person-item-count" onClick={()=>setItemsPersonId(person.id)}>{selectedItems} {selectedItems===1?"item":"items"}</button></span><strong>{money(rawShare)}</strong></header>
+            <header><span><i style={{background:person.color}}>{person.name[0].toUpperCase()}</i><strong style={{color:person.color}}>{person.name}</strong><button className="person-item-count" onClick={()=>setItemsPersonId(person.id)}>{selectedItems} {selectedItems===1?"item":"items"}</button></span><strong>{money(rawShare)}</strong></header>
             <div className="person-costs">
               <div><span>Tax, tip &amp; discount</span><strong>{signedMoney(receiptAdjustment)}</strong></div>
             </div>

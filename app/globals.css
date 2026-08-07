@@ -17,12 +17,14 @@ main.light { --bg: #eff6f1; --surface: #fff; --surface-2: #f2f7f4; --text: #1221
 .icon-button { width: 46px; height: 46px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface-2); color: var(--text); font-size: 22px; }
 .brand-mark { background: var(--accent); border-color: var(--accent); color: #073044; font-size: 30px; font-weight: 900; }
 .app-logo { width: 104px; height: 104px; padding: 0; overflow: visible; background: transparent; border: 0; margin-left: 0; transform: translateY(-8px); } .app-logo img { width: 104px; height: 104px; object-fit: contain; transform: scale(1.72); transform-origin: center; }
+.app-logo img.night-logo { transform: scale(2.04); }
 .brand-copy { text-align: center; display: flex; flex-direction: column; gap: 3px; }
 .brand-copy strong { font-size: clamp(31px, 6.4vw, 43px); line-height: 1; letter-spacing: .015em; white-space: nowrap; }
 .brand-copy span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
-.brand-subline { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.brand-subline { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
 .brand-subcopy { display: flex; flex-direction: column; gap: 2px; }
-.brand-subline .theme-button { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 11px; font-size: 17px; padding: 0; }
+.brand-subcopy { grid-column: 2; }
+.brand-subline .theme-button { grid-column: 3; justify-self: end; width: 42px; height: 42px; border-radius: 11px; font-size: 17px; padding: 0; }
 .account-strip { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 36px; margin: 7px 0 2px; padding: 4px 8px 4px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .account-strip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
 .account-strip button { flex: 0 0 auto; border: 0; border-radius: 9px; background: var(--accent); color: #073044; padding: 6px 14px; font-weight: 900; }
@@ -599,7 +601,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .person-payment-card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 15px; }
 .person-payment-card > header > span { display: flex; align-items: center; min-width: 0; gap: 10px; }
 .person-payment-card > header i { flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: #132026; font-style: normal; font-weight: 900; }
-.person-payment-card > header span strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; }
+.person-payment-card > header span strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; }
 .person-payment-card > header > strong { flex: 0 0 auto; font-size: 20px; }
 .person-payment-card > header > strong.credit { color: var(--accent); }
 .person-costs { display: grid; }
@@ -633,7 +635,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .restaurant-qr button { width: 100%; }
   .bill-restaurant-card { grid-template-columns: auto 1fr; }
   .bill-restaurant-card > button { grid-column: 1/-1; width: 100%; }
-  .person-payment-card > header span strong { font-size: 16px; }
+  .person-payment-card > header span strong { font-size: 18px; }
   .person-payment-card > header > strong { font-size: 17px; }
   .person-money-row .money-input { width: 130px; }
 }
@@ -650,7 +652,7 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .payment-box-heading { display: flex; align-items: center; gap: 11px; margin-bottom: 5px; }
 .payment-box-heading > span { flex: 0 0 auto; width: 45px; height: 45px; display: grid; place-items: center; overflow: hidden; border-radius: 13px; }
 .payment-box-heading img { width: 37px; height: 37px; object-fit: contain; }
-.payment-box-heading h3 { margin: 0; font-size: 19px; }
+.payment-box-heading h3 { margin: 0; font-size: 19px; font-weight: 900; }
 .person-payment-box .person-money-row .money-input input { color: var(--text); font-size: 18px; font-weight: 900; text-align: right; }
 .person-settlement-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .person-settlement-heading h4 { margin: 0; font-size: 17px; }
