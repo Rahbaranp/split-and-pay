@@ -1277,7 +1277,7 @@ export default function Home() {
       <div className="brand-copy">
         <strong>BILL SPLITTER</strong>
         <div className="brand-subline">
-          <span>Scan, split restaurant bills</span>
+          <div className="brand-subcopy"><span>Scan &amp; split</span><span>Restaurant bill</span></div>
           <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
         </div>
       </div>

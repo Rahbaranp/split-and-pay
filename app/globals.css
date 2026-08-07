@@ -16,13 +16,13 @@ main.light { --bg: #eff6f1; --surface: #fff; --surface-2: #f2f7f4; --text: #1221
 .topbar { min-height: 112px; border: 1px solid var(--accent); border-radius: 22px; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 8px; padding: 8px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); }
 .icon-button { width: 46px; height: 46px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface-2); color: var(--text); font-size: 22px; }
 .brand-mark { background: var(--accent); border-color: var(--accent); color: #073044; font-size: 30px; font-weight: 900; }
-.app-logo { width: 104px; height: 104px; padding: 0; overflow: visible; background: transparent; border: 0; margin-left: 0; } .app-logo img { width: 104px; height: 104px; object-fit: contain; transform: scale(1.72); transform-origin: center; }
-.app-logo img.day-logo { object-fit: cover; object-position: center 31%; }
+.app-logo { width: 104px; height: 104px; padding: 0; overflow: visible; background: transparent; border: 0; margin-left: 0; transform: translateY(-8px); } .app-logo img { width: 104px; height: 104px; object-fit: contain; transform: scale(1.72); transform-origin: center; }
 .brand-copy { text-align: center; display: flex; flex-direction: column; gap: 3px; }
 .brand-copy strong { font-size: clamp(31px, 6.4vw, 43px); line-height: 1; letter-spacing: .015em; white-space: nowrap; }
 .brand-copy span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
-.brand-subline { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.brand-subline .theme-button { width: 34px; height: 28px; flex: 0 0 34px; border-radius: 9px; font-size: 15px; padding: 0; }
+.brand-subline { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.brand-subcopy { display: flex; flex-direction: column; gap: 2px; }
+.brand-subline .theme-button { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 11px; font-size: 17px; padding: 0; }
 .account-strip { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 36px; margin: 7px 0 2px; padding: 4px 8px 4px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .account-strip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
 .account-strip button { flex: 0 0 auto; border: 0; border-radius: 9px; background: var(--accent); color: #073044; padding: 6px 14px; font-weight: 900; }
@@ -451,9 +451,9 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .share-content { grid-template-columns: 1fr; } .qr-wrap { width: fit-content; margin: 0 auto; } .share-card .share-link { grid-template-columns: 1fr; }
   .topbar { min-height: 110px; grid-template-columns: 78px minmax(0, 1fr); padding: 8px 10px; }
   .brand-copy strong { font-size: clamp(24px, 7.4vw, 32px); }
-  .brand-subline { gap: 5px; }
+  .brand-subline { gap: 7px; }
   .brand-copy span { white-space: nowrap; letter-spacing: .08em; }
-  .brand-subline .theme-button { width: 30px; height: 26px; flex-basis: 30px; font-size: 14px; }
+  .brand-subline .theme-button { width: 38px; height: 38px; flex-basis: 38px; font-size: 16px; }
   .progress.five-steps button { font-size: 9px; padding-inline: 2px; }
   .account-button { padding: 8px; font-size: 12px; }
 }
