@@ -1273,14 +1273,14 @@ export default function Home() {
   if (!ready) return null;
   return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""} ${draft.step===3?"expenses-step":""}`}><div className="app-shell">
     <header className="topbar">
-      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img className={draft.theme === "light" ? "day-logo" : "night-logo"} src={draft.theme === "light" ? "/bill-splitter-icon-day.png" : "/bill-splitter-icon.png"} alt="" /></button>
+      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img className={draft.theme === "light" ? "day-logo" : "night-logo"} src={draft.theme === "light" ? "/bill-splitter-icon-day.png" : "/bill-splitter-icon-dark-v2.png"} alt="" /></button>
       <div className="brand-copy">
         <strong>BILL SPLITTER</strong>
         <div className="brand-subline">
           <div className="brand-subcopy"><span>Scan &amp; split</span><span>Restaurant bill</span></div>
-          <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
         </div>
       </div>
+      <button className="icon-button theme-button" aria-label="Toggle color theme" onClick={() => setDraft((d) => ({ ...d, theme: d.theme === "dark" ? "light" : "dark" }))}>{draft.theme === "dark" ? "☀" : "☾"}</button>
     </header>
     <nav className="progress five-steps" aria-label="Bill steps">{([[1,"Start"],[2,"Group"],[3,"Expenses"],[4,"Assign"],[5,"Results"]] as const).map(([n,label]) => <button key={n} className={`${draft.step === n ? "active" : ""} ${draft.step > n ? "done" : ""}`} onClick={() => n < draft.step && !guestParticipantId && goTo(n)}><b>{draft.step > n ? "✓" : n}</b><span>{label}</span></button>)}</nav>
     {preferencePersonId&&(()=>{const person=draft.people.find((p)=>p.id===preferencePersonId);if(!person)return null;return <div className="account-backdrop" onMouseDown={()=>setPreferencePersonId("")}><section className="panel preference-dialog" role="dialog" aria-modal="true" onMouseDown={(event)=>event.stopPropagation()}><button className="account-close" onClick={()=>setPreferencePersonId("")}>×</button><h2>{person.name}’s settlement preferences</h2><p>Choose people in preferred order. Tap again to remove.</p><div className="preference-person"><div>{draft.people.filter((other)=>other.id!==person.id).map((other)=>{const rank=(draft.settlementPreferences[person.id]||[]).indexOf(other.id);return <button className={rank>=0?"selected":""} key={other.id} onClick={()=>toggleSettlementPreference(person.id,other.id)}><i style={{background:other.color}}>{other.name[0].toUpperCase()}</i><span>{other.name}</span>{rank>=0&&<b>{rank+1}</b>}</button>})}</div></div><button className="google-button" onClick={()=>setPreferencePersonId("")}>Done</button></section></div>})()}

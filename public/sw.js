@@ -1,5 +1,5 @@
-const CACHE_NAME = "splitpay-v6";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "splitpay-v7";
+const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-day-v2-192.png", "/icons/icon-day-v2-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
