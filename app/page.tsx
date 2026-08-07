@@ -1273,7 +1273,7 @@ export default function Home() {
   if (!ready) return null;
   return <main className={`${draft.theme} ${guestParticipantId ? "guest-mode" : ""} ${draft.step===3?"expenses-step":""}`}><div className="app-shell">
     <header className="topbar">
-      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img className={draft.theme === "light" ? "day-logo" : "night-logo"} src={draft.theme === "light" ? "/bill-splitter-icon-day.png" : "/bill-splitter-icon-dark-v2.png"} alt="" /></button>
+      <button className="icon-button brand-mark app-logo" aria-label="Start a new bill" onClick={clearDraft}><img className="night-logo" src="/bill-splitter-icon-dark-v2.png" alt="" /></button>
       <div className="brand-copy">
         <strong>BILL SPLITTER</strong>
         <div className="brand-subline">
