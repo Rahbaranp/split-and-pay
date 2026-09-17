@@ -137,17 +137,17 @@ footer button { border: 0; background: transparent; color: var(--accent); }
 .start-title { padding: 34px 12px 24px; text-align: center; }
 .start-title h1 { max-width: 720px; margin: 8px auto 12px; font-size: clamp(38px, 8vw, 62px); }
 .start-title p { max-width: 650px; margin: 0 auto; }
-.start-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.start-option { min-height: 370px; padding: 26px; display: flex; flex-direction: column; gap: 20px; }
-.start-option > div { flex: 1; }
+.start-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.start-option { min-height: 0; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.start-option > div { flex: 0; }
 .start-option small { color: var(--accent); font-weight: 800; letter-spacing: .14em; }
-.start-option h2 { margin: 8px 0 10px; font-size: clamp(25px, 4vw, 34px); line-height: 1.05; }
-.start-option p { margin: 0; color: var(--muted); line-height: 1.6; }
-.start-option > button { width: 100%; min-height: 54px; }
+.start-option h2 { margin: 0 0 6px; font-size: clamp(22px, 3.5vw, 29px); line-height: 1.1; }
+.start-option p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.start-option > button { width: 100%; min-height: 52px; margin: 0; }
 .start-account { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .account-off { border-color: var(--line); }
-.start-account-actions { display: grid; gap: 10px; }
-.start-account-actions button { width: 100%; min-height: 50px; }
+.start-account-actions { display: grid; gap: 8px; }
+.start-account-actions button { width: 100%; min-height: 48px; }
 .saved-feature-button { border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); color: var(--text); font-weight: 900; cursor: pointer; }
 .saved-feature-button:hover:not(:disabled) { border-color: var(--accent); }
 .saved-feature-button:disabled { background: color-mix(in srgb, var(--surface-2) 55%, var(--bg)); color: color-mix(in srgb, var(--muted) 65%, var(--bg)); border-color: color-mix(in srgb, var(--line) 65%, var(--bg)); cursor: not-allowed; box-shadow: none; }
@@ -520,7 +520,12 @@ footer button { border: 0; background: transparent; color: var(--accent); }
   .progress.five-steps button { font-size: 9px; }
   .progress.five-steps button b { width: 32px; height: 32px; }
   .start-options { grid-template-columns: 1fr; }
-  .start-option { min-height: 0; padding: 22px; }
+  .start-page { padding-top: 2px; }
+  .start-page .progress { padding-top: 7px; margin-bottom: 5px; }
+  .start-option { padding: 16px; gap: 10px; margin-bottom: 8px; border-radius: 18px; }
+  .start-option h2 { font-size: 23px; }
+  .start-option p { font-size: 13px; line-height: 1.35; }
+  .start-account-actions button, .start-option > button { min-height: 46px; }
   .scan-line { grid-template-columns: 24px 1fr; }
   .scan-line .money-input { grid-column: 2; width: 100%; }
 }
